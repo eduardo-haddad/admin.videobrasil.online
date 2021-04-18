@@ -1,0 +1,38 @@
+.main form.adjacent .nav-tabs-container {
+  margin-top: -20px; }
+
+.main form.adjacent .tab-content {
+  padding: 20px 15px 0px 15px; }
+
+.main form.adjacent #id_name {
+  width: 250px; }
+
+.main form.adjacent label {
+  width: 180px; }
+
+.main form.adjacent input,
+.main form.adjacent textarea {
+  width: 480px; }
+
+.main form.adjacent .tokenfield {
+  display: inline-table;
+  padding: 8px 2px 0px 5px;
+  border: 1px solid #ccc;
+  min-height: 0px;
+  width: 471px; }
+
+.main form.adjacent ul.errorlist + p .tokenfield {
+  background-color: #f2dede;
+  border-color: #eec3c7; }
+
+.main form.adjacent div.client-status {
+  margin-bottom: 10px;
+  min-height: 27px; }
+  .main form.adjacent div.client-status div.toggle-sandbox-mode {
+    display: inline;
+    position: relative; }
+
+.main form.adjacent div.review-response {
+  margin-bottom: 20px; }
+  .main form.adjacent div.review-response li {
+    margin: 10px 0 -10px 0; }

@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Client;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Group extends Model
+{
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'db_res_utf8.res_user_groups';
+
+    /**
+     * Get the clients for the group.
+     */
+    public function clients()
+    {
+        return $this->hasMany('App\Client\Client');
+    }
+}
+

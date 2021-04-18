@@ -1,0 +1,10 @@
+{
+  "name": "agenteimovel/alertsystem",
+  "description": "Email Alert System",
+  "keywords": [],
+  "type": "library",
+  "minimum-stability": "dev",
+  "require": {
+    "php": ">=7.0"
+  }
+}

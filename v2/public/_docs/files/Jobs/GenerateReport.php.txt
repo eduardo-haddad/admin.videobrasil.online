@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Broadcast;
+use App\Http\Services\Reports\Report;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Bus\Queueable;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+
+class GenerateReport implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * @var App\Http\Services\Reports\Report
+     */
+    protected $report;
+
+    /**
+     * @var Illuminate\Database\Eloquent\Model
+     */
+    protected $model;
+
+    /**
+     * Create a new job instance.
+     *
+     * @return void
+     */
+    public function __construct(Report $report, Model $model)
+    {
+        $this->report = $report;
+        $this->model = $model;
+    }
+
+    /**
+     * Execute the job.
+     *
+     * @return void
+     */
+    public function handle(Broadcast $broadcast)
+    {
+        // Please, read the following documentation before proceeding:
+        // https://laravel.com/docs/5.5/filesystem#the-public-disk
+
+        if($this->model->name){
+            $filename = 'reports/' . str_slug($this->model->name, '-') . '-' . $this->model->id . '.xlsx';
+        } else {
+            $filename = 'reports/' . $this->model->id . '.xlsx';
+        }
+
+        if($this->report->store($filename)){
+            $this->model->file = $filename;
+            $this->model->save();
+
+            $broadcast->trigger('report-complete', [
+                'id' => $this->model->id,
+                'file' => asset('storage/' . $this->model->file)
+            ]);
+        }
+    }
+}
+

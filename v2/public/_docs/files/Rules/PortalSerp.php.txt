@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Rules;
+
+use GuzzleHttp\Client;
+use Illuminate\Contracts\Validation\Rule;
+
+class PortalSerp implements Rule
+{
+    /**
+     * Create a new rule instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        //
+    }
+
+    /**
+     * Determine if the validation rule passes.
+     *
+     * @param  string  $attribute
+     * @param  mixed  $value
+     * @return bool
+     */
+    public function passes($attribute, $value)
+    {
+        // First, validate the uri against the SERP pattern.
+        // The uri must not contain: query string | pagination | characteristic such as "quartos_1-1" | or be one of the following pages
+        if(preg_match('/\?|p_[0-9]+|[a-z]+\_[0-9]+\-[0-9]+|sobre|fale\-conosco|anuncie\-imovel|quanto\-vale|mercado-imobiliario/', $value) == 1){
+            return false;
+        }
+
+        // Now, validate the uri against HTTP Status Code
+        $client = new Client;
+        $auth = [env('PORTAL_USERNAME'), env('PORTAL_PASSWORD')];
+        $response = $client->request('GET', env('PORTAL_URL') . '/' . trim($value, '/'), ['auth' => $auth, 'http_errors' => false]);
+
+        return $response->getStatusCode() == 200;
+    }
+
+    /**
+     * Get the validation error message.
+     *
+     * @return string
+     */
+    public function message()
+    {
+        return 'A URL não é um SERP válido.';
+    }
+}
+

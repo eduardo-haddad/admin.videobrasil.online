@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Http\Controllers\Lead;
+
+use App\Lead\Lead;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+
+class DisqualifyController extends Controller
+{
+    /**
+     * Display a listing of the resource (used for disqualify the lead).
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request)
+    {
+        $leads = Lead::with(['listing.client.group', 'campaign']);
+        $new_leads = Lead::new()->count();
+        $total_leads = Lead::fromMay1st()->count();
+        $disqualified_leads = Lead::disqualified()->count();
+
+        if($request->filled('from_date')){
+            $from_date = Carbon::createFromFormat('d/m/Y', $request->get('from_date'));
+            $leads->withoutGlobalScope('may_1st')->where('datetime', '>=', $from_date->startOfDay());
+        } else {
+            $leads->fromMay1st();
+        }
+
+        if($request->filled('to_date')){
+            $to_date = Carbon::createFromFormat('d/m/Y', $request->get('to_date'));
+            $leads->where('datetime', '<=', $to_date->endOfDay());
+        }
+
+        if($request->filled('by_resource')){
+            if($request->filled('resource_id')){
+                $leads->where($request->get('by_resource'), $request->get('resource_id'));
+            } else {
+                $leads->whereNotNull($request->get('by_resource'));
+            }
+        }
+
+        $leads->disqualified(false)
+              ->orderBy('datetime', 'DESC');
+
+        return view('leads.disqualify.index', [
+            'leads' => $leads->paginate(15),
+            'new_leads' => number_format($new_leads, 0, ',', '.'),
+            'total_leads' => number_format($total_leads, 0, ',', '.'),
+            'disqualified_leads' => number_format($disqualified_leads, 0, ',', '.'),
+        ]);
+    }
+}
+

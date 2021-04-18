@@ -1,0 +1,756 @@
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box; }
+
+@font-face {
+  font-family: 'Gotham Light';
+  src: url("../webfonts/Gotham-Light.otf") format("opentype"); }
+@font-face {
+  font-family: 'Gotham Book';
+  src: url("../webfonts/Gotham-Book.otf") format("opentype"); }
+@font-face {
+  font-family: 'Gotham Medium';
+  src: url("../webfonts/Gotham-Medium.otf") format("opentype"); }
+@font-face {
+  font-family: 'Gotham Bold';
+  src: url("../webfonts/Gotham-Bold.otf") format("opentype"); }
+#ghostdiv,
+#ghostdiv_th,
+#ghostdiv2,
+#ghostdiv2_th,
+#ghostdiv3,
+#ghostdiv3_th {
+  display: none; }
+
+a,
+a img,
+fieldset {
+  text-decoration: none;
+  border: none; }
+
+a {
+  -webkit-transition: all .25s ease-in-out 0s;
+  -moz-transition: all .25s ease-in-out 0s;
+  transition: all .25s ease-in-out 0s; }
+
+a:hover {
+  text-decoration: underline; }
+
+ul,
+li,
+ol {
+  list-style-type: none; }
+
+input[type="button"]:focus,
+input[type="submit"]:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+select:focus,
+button:focus,
+textarea:focus {
+  outline: 0; }
+
+table {
+  border-collapse: separate;
+  border-spacing: 0; }
+
+button {
+  cursor: pointer; }
+
+textarea {
+  overflow: auto; }
+
+.input {
+  border: 2px solid #f0a534; }
+  .input.editable {
+    border: 2px solid #f0a534; }
+  .input.disabled {
+    background-color: transparent;
+    border: 2px solid transparent;
+    pointer-events: none; }
+
+.textarea {
+  resize: none; }
+
+#header h1 {
+  margin: 25px 0; }
+
+.bg-gray {
+  background-color: #d8d8db; }
+
+.switch {
+  position: relative;
+  width: 45px;
+  height: 22px;
+  display: none; }
+  .switch input {
+    display: none; }
+    .switch input:checked + .slider {
+      background-color: #5cb85c; }
+    .switch input:checked + .slider:before {
+      -webkit-transform: translateX(23px);
+      -ms-transform: translateX(23px);
+      transform: translateX(23px); }
+    .switch input:focus + .slider {
+      box-shadow: 0 0 1px #5cb85c; }
+  .switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #515f66;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: 34px; }
+    .switch .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 1px;
+      top: 1px;
+      background-color: #f1f1f1;
+      -webkit-transition: .4s;
+      transition: .4s;
+      border: 1px solid rgba(0, 0, 0, 0.03);
+      border-radius: 50%;
+      -webkit-box-shadow: 2px 2px 6px -3px black;
+      -moz-box-shadow: 2px 2px 6px -3px black;
+      box-shadow: 2px 2px 6px -3px black; }
+
+#banner {
+  background: url(../images/banner.jpg) no-repeat center;
+  background-size: cover;
+  min-height: 589px;
+  position: relative;
+  border-top: 5px solid #f0a534;
+  border-bottom: 5px solid #f0a534;
+  position: relative; }
+  #banner .container .row.align-items-center {
+    min-height: 589px; }
+    #banner .container .row.align-items-center .holder-banner {
+      text-align: center;
+      z-index: 2;
+      color: #fff;
+      position: relative; }
+      #banner .container .row.align-items-center .holder-banner h2 {
+        width: 80%;
+        margin: 0 auto;
+        font-family: 'Gotahm Bold', sans-serif;
+        font-size: 68px;
+        color: #fff;
+        line-height: 1.2;
+        text-transform: uppercase;
+        text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.35); }
+      #banner .container .row.align-items-center .holder-banner .holder-edit p {
+        display: inline-block;
+        margin-right: 10px;
+        font-family: 'Gotham Medium', sans-serif;
+        font-size: 39px;
+        text-transform: uppercase;
+        text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.35); }
+      #banner .container .row.align-items-center .holder-banner .holder-edit .input {
+        display: inline-block;
+        font-family: 'Gotham Medium', sans-serif;
+        font-size: 39px;
+        text-transform: uppercase;
+        text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.35); }
+        #banner .container .row.align-items-center .holder-banner .holder-edit .input.disabled {
+          color: #fff; }
+      #banner .container .row.align-items-center .holder-banner .holder-edit .buttons {
+        float: left;
+        clear: both;
+        width: 100%;
+        text-align: center; }
+        #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li {
+          display: inline-block;
+          width: 4.5%;
+          text-align: center; }
+          #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li span {
+            position: absolute; }
+          #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-edit-company,
+          #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-save-company,
+          #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-cancel-company {
+            font-size: 2.5em;
+            text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.35); }
+          #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-edit-company .fa-circle {
+            color: #f0a534; }
+          #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-save-company {
+            display: none; }
+            #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-save-company .fa-circle {
+              color: green; }
+          #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-cancel-company {
+            display: none; }
+            #banner .container .row.align-items-center .holder-banner .holder-edit .buttons li #btn-cancel-company .fa-circle {
+              color: red; }
+
+#contato {
+  padding: 80px 0; }
+  #contato .holder-edit h3 {
+    font-family: 'Gotham Medium', sans-serif;
+    font-size: 35px;
+    color: #515f66;
+    text-align: center; }
+    #contato .holder-edit h3:after {
+      content: '';
+      display: block;
+      width: 210px;
+      height: 1px;
+      margin: 10px auto 45px;
+      border-bottom: 3px solid #515f66; }
+    #contato .holder-edit h3 span {
+      display: inline-block; }
+    #contato .holder-edit h3 .input {
+      display: inline-block;
+      color: #515f66;
+      font-style: italic; }
+      #contato .holder-edit h3 .input.disabled {
+        color: #515f66;
+        font-style: italic; }
+    #contato .holder-edit h3 .buttons {
+      display: inline-block;
+      margin: 0;
+      width: 10%;
+      text-align: left; }
+      #contato .holder-edit h3 .buttons li {
+        display: inline-block;
+        width: 45%;
+        color: #fff; }
+        #contato .holder-edit h3 .buttons li span {
+          position: absolute !important; }
+        #contato .holder-edit h3 .buttons li #btn-edit-contact,
+        #contato .holder-edit h3 .buttons li #btn-save-contact,
+        #contato .holder-edit h3 .buttons li #btn-cancel-contact {
+          font-size: 1em;
+          position: relative;
+          top: 5px; }
+        #contato .holder-edit h3 .buttons li #btn-edit-contact .fa-circle {
+          color: #f0a534; }
+        #contato .holder-edit h3 .buttons li #btn-edit-contact .fa-pen {
+          color: #fff; }
+        #contato .holder-edit h3 .buttons li #btn-save-contact {
+          display: none; }
+          #contato .holder-edit h3 .buttons li #btn-save-contact .fa-circle {
+            color: green; }
+        #contato .holder-edit h3 .buttons li #btn-cancel-contact {
+          display: none; }
+          #contato .holder-edit h3 .buttons li #btn-cancel-contact .fa-circle {
+            color: red; }
+  #contato p {
+    margin-bottom: 15px;
+    font-family: 'Gotham Light', sans-serif;
+    font-size: 25px;
+    color: #515f66; }
+    #contato p #nome-empresa {
+      font-family: 'Gotham Bold', sans-serif;
+      text-transform: capitalize;
+    }
+  #contato #txt-contato {
+    background-color: #fff;
+    width: 100%;
+    height: 140px;
+    margin-bottom: 15px;
+    font-family: 'Gotham Light', sans-serif;
+    font-size: 25px;
+    color: #515f66;
+    overflow: hidden; }
+    #contato #txt-contato.disabled {
+      background-color: transparent;
+      padding: 0;
+      border: none;
+      pointer-events: none; }
+
+#desafio {
+  padding: 45px 0 90px; }
+  #desafio h4 {
+    margin-bottom: 40px;
+    font-family: 'Gotham Medium', sans-serif;
+    font-size: 35px;
+    color: #515f66;
+    border-bottom: 4px solid #f0a534; }
+    #desafio h4 .input {
+      display: inline-block;
+      font-family: 'Gotham Medium', sans-serif;
+      font-size: 35px;
+      color: #515f66; }
+    #desafio h4 .buttons {
+      display: inline-block;
+      margin: 0;
+      width: 10%;
+      color: #fff;
+      text-align: left; }
+      #desafio h4 .buttons li {
+        display: inline-block;
+        width: 45%; }
+        #desafio h4 .buttons li span {
+          position: absolute !important; }
+        #desafio h4 .buttons li #btn-edit-challenge,
+        #desafio h4 .buttons li #btn-save-challenge,
+        #desafio h4 .buttons li #btn-cancel-challenge {
+          font-size: 0.9em;
+          position: relative;
+          top: 2px; }
+        #desafio h4 .buttons li #btn-edit-challenge .fa-circle {
+          color: #f0a534; }
+        #desafio h4 .buttons li #btn-edit-challenge .fa-pen {
+          color: #fff; }
+        #desafio h4 .buttons li #btn-save-challenge {
+          display: none; }
+          #desafio h4 .buttons li #btn-save-challenge .fa-circle {
+            color: green; }
+        #desafio h4 .buttons li #btn-cancel-challenge {
+          display: none; }
+          #desafio h4 .buttons li #btn-cancel-challenge .fa-circle {
+            color: red; }
+  #desafio .textarea {
+    width: 100%;
+    height: 500px;
+    font-family: 'Gotham Light', sans-serif;
+    font-size: 25px;
+    color: #515f66;
+    font-style: italic;
+    overflow: hidden; }
+    #desafio .textarea.disabled {
+      border: none;
+      pointer-events: none; }
+
+#plano {
+  padding: 0 0 110px; }
+  #plano h4 {
+    margin-bottom: 35px;
+    font-family: 'Gotham Medium', sans-serif;
+    font-size: 35px;
+    color: #515f66;
+    border-bottom: 4px solid #f0a534; }
+    #plano h4 .input {
+      display: inline-block;
+      font-family: 'Gotham Medium', sans-serif;
+      font-size: 35px;
+      color: #515f66; }
+    #plano h4 .buttons {
+      display: inline-block;
+      margin: 0;
+      width: 10%;
+      color: #fff; }
+      #plano h4 .buttons li {
+        display: inline-block;
+        width: 45%; }
+        #plano h4 .buttons li span {
+          position: absolute; }
+        #plano h4 .buttons li #btn-edit-plan,
+        #plano h4 .buttons li #btn-save-plan,
+        #plano h4 .buttons li #btn-cancel-plan {
+          font-size: 0.9em;
+          top: 2px; }
+        #plano h4 .buttons li #btn-edit-plan .fa-circle {
+          color: #f0a534; }
+        #plano h4 .buttons li #btn-edit-plan .fa-pen {
+          color: #fff; }
+        #plano h4 .buttons li #btn-save-plan {
+          display: none; }
+          #plano h4 .buttons li #btn-save-plan .fa-circle {
+            color: green; }
+        #plano h4 .buttons li #btn-cancel-plan {
+          display: none; }
+          #plano h4 .buttons li #btn-cancel-plan .fa-circle {
+            color: red; }
+  #plano p {
+    margin-bottom: 35px;
+    font-family: 'Gotham Light', sans-serif;
+    font-size: 25px;
+    color: #515f66; }
+  #plano .itens-plano {
+    width: 95%;
+    padding: 25px;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 2px solid #f0a534; }
+    #plano .itens-plano.disabled {
+      border-color: transparent; }
+    #plano .itens-plano li {
+      float: left;
+      padding: 0 1%;
+      margin: 25px 0; }
+      #plano .itens-plano li.active {
+        display: block !important; }
+      #plano .itens-plano li.disabled {
+        display: none; }
+      #plano .itens-plano li img {
+        max-height: 68px;
+        margin-right: 20px;
+        max-width: 60px; }
+      #plano .itens-plano li .txt {
+        font-family: 'Gotham Book';
+        font-size: 20px;
+        color: #515f66; }
+      #plano .itens-plano li .switch {
+        margin: 0 0 0 15px;
+        top: 4px; }
+
+#valores {
+  padding: 60px 0 0; }
+  #valores h4 {
+    margin-bottom: 35px;
+    font-family: 'Gotham Medium', sans-serif;
+    font-size: 35px;
+    color: #515f66;
+    border-bottom: 4px solid #f0a534; }
+    #valores h4 .input {
+      font-family: 'Gotham Medium', sans-serif;
+      font-size: 35px;
+      color: #515f66; }
+    #valores h4 .buttons {
+      display: inline-block; }
+      #valores h4 .buttons li {
+        display: inline-block;
+        width: 4.5%;
+        text-align: center; }
+        #valores h4 .buttons li span {
+          position: absolute; }
+        #valores h4 .buttons li #btn-edit-company,
+        #valores h4 .buttons li #btn-save-company,
+        #valores h4 .buttons li #btn-cancel-company {
+          font-size: 0.9em;
+          position: relative;
+          top: 2px; }
+        #valores h4 .buttons li #btn-edit-company .fa-circle {
+          color: #f0a534; }
+        #valores h4 .buttons li #btn-edit-company .fa-pen {
+          color: #fff; }
+        #valores h4 .buttons li #btn-save-company {
+          display: none; }
+          #valores h4 .buttons li #btn-save-company .fa-circle {
+            color: green; }
+        #valores h4 .buttons li #btn-cancel-company {
+          display: none; }
+          #valores h4 .buttons li #btn-cancel-company .fa-circle {
+            color: red; }
+  #valores .holder-table {
+    float: left;
+    width: 100%;
+    margin-bottom: 100px; }
+    #valores .holder-table .icon {
+      background-position: center;
+      background-size: 60%;
+      background-repeat: no-repeat;
+      display: inline-block;
+      float: left;
+      width: 32px;
+      height: 32px;
+      position: relative;
+      border-radius: 50%; }
+      #valores .holder-table .icon.add-row {
+        background-color: #228be6;
+        background-image: url(../images/icons/row-add.png);
+        display: none;
+        margin-right: 5px; }
+      #valores .holder-table .icon.delete-row {
+        background-color: red;
+        background-image: url(../images/icons/row-delete.png);
+        display: none; }
+      #valores .holder-table .icon.add-column {
+        background-color: green;
+        background-image: url(../images/icons/column-add.png);
+        display: none;
+        margin-right: 5px; }
+      #valores .holder-table .icon.delete-column {
+        background-color: red;
+        background-image: url(../images/icons/column-delete.png);
+        display: none; }
+      #valores .holder-table .icon label {
+        text-indent: -3000em; }
+    #valores .holder-table .edit-table {
+      margin-bottom: 30px;
+      white-space: nowrap; }
+      #valores .holder-table .edit-table h5 {
+        float: left;
+        margin: 0 15px 0 0; }
+        #valores .holder-table .edit-table h5 .input {
+          font-family: 'Gotham Bold', sans-serif;
+          font-size: 29px;
+          color: #515f66; }
+      #valores .holder-table .edit-table .buttons {
+        float: left;
+        color: #fff; }
+        #valores .holder-table .edit-table .buttons li {
+          display: inline-block;
+          min-width: 37px;
+          min-height: 32px;
+          margin-right: 15px;
+          position: relative;
+          text-align: center; }
+          #valores .holder-table .edit-table .buttons li:first-child {
+            text-align: left; }
+          #valores .holder-table .edit-table .buttons li:last-child {
+            margin-right: 0; }
+          #valores .holder-table .edit-table .buttons li .fa-layers {
+            position: absolute; }
+          #valores .holder-table .edit-table .buttons li .btn-edit,
+          #valores .holder-table .edit-table .buttons li .btn-save {
+            font-size: 2em;
+            text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.35); }
+          #valores .holder-table .edit-table .buttons li .btn-edit .fa-circle {
+            color: #f0a534; }
+          #valores .holder-table .edit-table .buttons li .btn-save {
+            display: none; }
+            #valores .holder-table .edit-table .buttons li .btn-save .fa-circle {
+              color: green; }
+          #valores .holder-table .edit-table .buttons li .btn-add {
+            position: absolute;
+            right: 2%;
+            top: .5%;
+            display: none; }
+            #valores .holder-table .edit-table .buttons li .btn-add .fa-circle {
+              color: #228be6; }
+          #valores .holder-table .edit-table .buttons li #btn-delete-column02 {
+            display: none; }
+          #valores .holder-table .edit-table .buttons li #btn-switch-discount02,
+          #valores .holder-table .edit-table .buttons li #btn-switch-discount03 {
+            display: none;
+            background-color: #515f66 }
+    #valores .holder-table .table {
+      width: 100%; }
+      #valores .holder-table .table.disabled {
+        display: none; }
+      #valores .holder-table .table.active {
+        display: block; }
+      #valores .holder-table .table table {
+        width: 100%;
+        border: 2px solid #515f66; }
+        #valores .holder-table .table table tbody tr:first-child td {
+          background-color: #f0a534;
+          padding: 7px 15px;
+          font-family: 'Gotham Medium', sans-serif;
+          font-size: 24px;
+          color: #fff;
+          text-transform: uppercase;
+          text-align: center;
+          border-bottom: 2px dashed #515f66;
+          border-right: 2px dashed #515f66; }
+          #valores .holder-table .table table tbody tr:first-child td:last-child {
+            border-right: none; }
+          #valores .holder-table .table table tbody tr:first-child td .input {
+            font-family: 'Gotham Medium', sans-serif;
+            font-size: 24px;
+            color: #515f66; }
+            #valores .holder-table .table table tbody tr:first-child td .input.disabled {
+              color: #fff; }
+        #valores .holder-table .table table tbody tr td {
+          padding: 7px 15px 8px;
+          font-family: 'Gotham Book', sans-serif;
+          font-size: 18px;
+          color: #515f66;
+          border-bottom: 2px dashed #515f66;
+          border-right: 2px dashed #515f66;
+          position: relative; }
+          #valores .holder-table .table table tbody tr td .icon {
+            left: 50%;
+            -webkit-transform: translate(-50%, 0);
+            -moz-transform: translate(-50%, 0);
+            -ms-transform: translate(-50%, 0);
+            transform: translate(-50%, 0); }
+          #valores .holder-table .table table tbody tr td:nth-child(2) {
+            text-align: center; }
+            #valores .holder-table .table table tbody tr td:nth-child(2) .input {
+              text-align: center; }
+          #valores .holder-table .table table tbody tr td .input {
+            font-family: 'Gotham Book', sans-serif;
+            font-size: 21px;
+            color: #515f66; }
+
+          #valores .holder-table .table table tbody tr td .input.new-item {
+            width: 100%;
+          }
+
+          #valores .holder-table .table table tbody tr td .input.new-item.new-column {
+            text-align: center;
+          }
+
+          #valores .holder-table .table table tbody tr td .btn-delete {
+            font-size: 1.5em;
+            color: #fff; }
+            #valores .holder-table .table table tbody tr td .btn-delete .fa-circle {
+              color: red; }
+        #valores .holder-table .table table tbody tr.leads td {
+          font-family: 'Gotham Bold', sans-serif; }
+        #valores .holder-table .table table tbody tr.total td {
+          background-color: #515f66;
+          font-family: 'Gotham Bold', sans-serif;
+          color: #fff; }
+          #valores .holder-table .table table tbody tr.total td .input {
+            font-family: 'Gotham Bold', sans-serif;
+            color: #515f66; }
+            #valores .holder-table .table table tbody tr.total td .input.disabled {
+              color: #fff; }
+        #valores .holder-table .table table tbody tr:last-child td {
+          border-bottom: none; }
+        #valores .holder-table .table table tbody tr.new td:last-child {
+          display: table-cell; }
+        #valores .holder-table .table table tbody + tbody {
+          border-top: 2px dashed #515f66; }
+
+#validade {
+  padding: 75px 0; }
+  #validade .holder-edit p {
+    float: left;
+    margin: 0 15px 0 0;
+    font-family: 'Gotham Medium', sans-serif;
+    font-size: 25px;
+    color: #515f66; }
+    #validade .holder-edit p strong {
+      font-family: 'Gotham Bold', sans-serif; }
+  #validade .holder-edit .input {
+    float: left;
+    width: 150px;
+    margin-right: 15px;
+    font-family: 'Gotham Bold', sans-serif;
+    font-size: 25px;
+    color: #515f66; }
+  #validade .holder-edit .buttons {
+    float: left; }
+    #validade .holder-edit .buttons li {
+      float: left;
+      padding: 0 40px 0 0;
+      width: 49%;
+      min-height: 10px; }
+      #validade .holder-edit .buttons li span {
+        position: absolute; }
+      #validade .holder-edit .buttons li #btn-edit-validity,
+      #validade .holder-edit .buttons li #btn-save-validity,
+      #validade .holder-edit .buttons li #btn-cancel-validity {
+        font-size: 2em;
+        text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.35);
+        color: #fff; }
+      #validade .holder-edit .buttons li #btn-edit-validity .fa-circle {
+        color: #f0a534; }
+      #validade .holder-edit .buttons li #btn-save-validity {
+        display: none; }
+        #validade .holder-edit .buttons li #btn-save-validity .fa-circle {
+          color: green; }
+      #validade .holder-edit .buttons li #btn-cancel-validity {
+        display: none; }
+        #validade .holder-edit .buttons li #btn-cancel-validity .fa-circle {
+          color: red; }
+
+#vendedor {
+  background-color: #3d3f41;
+  padding: 40px 0 70px; }
+  #vendedor .buttons {
+    float: left;
+    width: 70px; }
+    #vendedor .buttons li {
+      display: block;
+      width: 100%;
+      padding: 0 0 40px 0;
+      margin-bottom: 15px;
+      text-align: center;
+      color: #fff;
+      position: relative; }
+      #vendedor .buttons li span {
+        position: absolute;
+        left: 0;
+        top: 0; }
+      #vendedor .buttons li #btn-edit-seller,
+      #vendedor .buttons li #btn-save-seller,
+      #vendedor .buttons li #btn-cancel-seller {
+        font-size: 2em;
+        text-shadow: 0px 2px 5px rgba(0, 0, 0, 0.35); }
+      #vendedor .buttons li #btn-edit-seller .fa-circle {
+        color: #f0a534; }
+      #vendedor .buttons li #btn-save-seller {
+        display: none; }
+        #vendedor .buttons li #btn-save-seller .fa-circle {
+          color: green; }
+      #vendedor .buttons li #btn-cancel-seller {
+        display: none; }
+        #vendedor .buttons li #btn-cancel-seller .fa-circle {
+          color: red; }
+  #vendedor .foto {
+    float: left;
+    width: 130px;
+    margin-right: 25px;
+    position: relative; }
+    #vendedor .foto #seller-photo {
+      background-image: url(../images/seller.jpg);
+      background-position: center;
+      background-size: cover;
+      width: 130px;
+      height: 130px;
+      margin-top: 10px;
+      border: 2px solid #f0a534;
+      border-radius: 50%; }
+    #vendedor .foto #file-upload {
+      display: none; }
+    #vendedor .foto #btn-upload {
+      background-color: transparent;
+      border: none;
+      outline: 0;
+      border-radius: 50%;
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: none; }
+      #vendedor .foto #btn-upload .fa-user-edit {
+        color: #f0a534; }
+  #vendedor .dados {
+    float: left;
+    width: 800px; }
+    #vendedor .dados ul {
+      margin: 0; }
+      #vendedor .dados ul li .input {
+        font-family: 'Gotham Light';
+        color: #000; }
+        #vendedor .dados ul li .input.disabled {
+          color: #fff; }
+      #vendedor .dados ul li #input-edit-seller-name {
+        font-size: 40px; }
+      #vendedor .dados ul li #input-edit-seller-role {
+        font-size: 23px; }
+      #vendedor .dados ul li #input-edit-seller-email {
+        font-size: 20px; }
+      #vendedor .dados ul li #input-edit-seller-tel {
+        font-size: 18px; }
+
+#download {
+  padding: 90px 0; }
+  #download button {
+    background-color: #e6a540;
+    padding: 9px 118px;
+    font-family: 'Gotham Bold';
+    font-size: 42px;
+    color: #fff;
+    text-transform: uppercase;
+    border: none; }
+
+.hiddendiv-contato,
+.hiddendiv-desafio {
+  display: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  /* future version of deprecated 'word-wrap' */ }
+
+.common-contato {
+  width: 100%;
+  max-width: 1110px;
+  min-height: 50px;
+  font-family: 'Gotham Light', sans-serif;
+  font-size: 25px;
+  color: #515f66;
+  overflow: hidden; }
+
+.common-desafio {
+  width: 100%;
+  max-width: 1110px;
+  min-height: 50px;
+  font-family: 'Gotham Light', sans-serif;
+  font-size: 25px;
+  color: #515f66;
+  font-style: italic;
+  overflow: hidden; }
+
+/*# sourceMappingURL=swag.css.map */

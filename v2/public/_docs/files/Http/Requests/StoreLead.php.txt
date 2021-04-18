@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreLead extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        $id = $this->route('id');
+
+        return [
+            'ids' => 'json|' . ($id) ? 'nullable' : 'required',
+
+            // Rules to disqualify one or more leads
+            'disqualified' => 'bail|nullable|boolean',
+            'disqualified_reason_type' => 'bail|required_with:disqualified|in:contact,costumer,over_delivery,subsidized,other',
+            'disqualified_reason_msg' => 'required_if:disqualified_reason_type,subsidized,other',
+
+            // Rules to update one or more leads
+            'fromname' => 'bail|required_without:disqualified|string|max:255',
+            'fromemail' => 'bail|required_without:disqualified|string|email|max:255',
+            'fromphone1' => 'required_without:disqualified|digits_between:8,11'
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array
+     */
+    public function messages()
+    {
+        return [
+            'disqualified_reason_type.required' => 'Escolha o motivo da desqualificação do lead.',
+            'disqualified_reason_msg.required_if' => 'Informe o porquê.'
+        ];
+    }
+}
+

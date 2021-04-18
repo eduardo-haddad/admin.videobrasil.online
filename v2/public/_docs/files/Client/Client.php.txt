@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Client;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Client extends Model
+{
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'db_res_utf8.res_users';
+
+    /**
+     * The primary key column.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'user_id';
+
+    /**
+     * The attributes that should be hidden for arrays.
+     *
+     * @var array
+     */
+    protected $hidden = [
+        'user_password', 'user_activation_link'
+    ];
+
+    /**
+     * Get the group that owns the client.
+     */
+    public function group()
+    {
+        return $this->belongsTo('App\Client\Group');
+    }
+
+    /**
+     * Get the listings for the client.
+     */
+    public function listings()
+    {
+        return $this->hasMany('App\Listing\Listing');
+    }
+
+    /**
+     * Get the client's full name.
+     */
+    public function getFullnameAttribute()
+    {
+        return $this->user_firstname . ' ' . $this->user_lastname;
+    }
+}
+

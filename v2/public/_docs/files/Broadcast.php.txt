@@ -1,0 +1,46 @@
+<?php
+
+namespace App;
+
+use Pusher\Pusher;
+
+class Broadcast
+{
+    /**
+     * @var Pusher\Pusher $pusher
+     */
+    protected $pusher;
+
+    /**
+     * Creates a new Broadcast instance
+     */
+    public function __construct()
+    {
+        $this->pusher = new Pusher(
+            env('PUSHER_APP_KEY'),
+            env('PUSHER_APP_SECRET'),
+            env('PUSHER_APP_ID'),
+            [
+                'cluster' => env('PUSHER_APP_CLUSTER'),
+                'encrypted' => true
+            ]
+        );
+    }
+
+    /**
+     * Triggers a new event.
+     *
+     * @param string $event
+     * @param array $data
+     * @param string $channel
+     */
+    public function trigger($event, array $data = [], $channel = 'broadcast')
+    {
+        try{
+            $this->pusher->trigger($channel, $event, $data);
+        } catch (\Exception $e){
+            report($e);
+        }
+    }
+}
+

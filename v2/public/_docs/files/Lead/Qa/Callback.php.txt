@@ -1,0 +1,9 @@
+<?php
+
+namespace App\Lead\Qa;
+
+class Callback extends ContactAttempt
+{
+    protected static $singleTableType = 'App\Lead\Qa\Callback';
+}
+

@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Listing;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Newconst extends Model
+{
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'ai_prod.res_listings_newconst';
+
+    /**
+     * The primary key column.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'listing_id';
+
+    /**
+     * Indicates if the model should be timestamped.
+     *
+     * @var bool
+     */
+    public $timestamps = false;
+
+    /**
+     *
+     */
+    public function listing()
+    {
+        return $this->belongsTo('App\Listing\Listing', 'listing_id');
+    }
+
+    /**
+     *
+     */
+    public function getConstructionStageAttribute()
+    {
+        $stages = [
+            1 => 'Pré-Lançamento',
+            2 => 'Em Obra',
+            3 => 'Lançamento',
+            4 => 'Pronto para morar',
+            5 => 'Consulta'
+        ];
+
+        if(isset($stages[$this->attributes['construction_stage_id']])){
+            return $stages[$this->attributes['construction_stage_id']];
+        }
+
+        return '';
+    }
+}
+

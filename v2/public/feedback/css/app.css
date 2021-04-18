@@ -1,0 +1,61 @@
+body {
+  background-color: #F7F7F7;
+}
+
+a{
+  color: #1ABB9C;
+  padding: 3px;
+  border-radius: 3px;
+}
+
+a:hover{
+  color: #1ABB9C;
+  background: #ececec;
+}
+
+.main_container .top_nav{
+  margin: initial;
+}
+
+.nav_menu .navbar-left{
+  font-size: 22px;
+}
+
+.table th, .table td{
+  white-space: initial;
+  width: initial;
+}
+
+.questionnaire{
+  width: 640px;
+  height: 470px;
+  margin: auto;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.questionnaire .radio{
+  padding: 5px;
+  margin: 8px 0;
+  background: #f7f7f7;
+  border-radius: 3px;
+}
+
+.lead-profile h4 .fa{
+  width: 20px;
+  height: 20px;
+  text-align: center;
+}
+
+.lead-profile a.truncate{
+  display: inline-block;
+  vertical-align: text-top;
+  max-width: calc(90% - 6px);
+}
+
+.lead-client .dataTables_wrapper .row:last-child {
+    padding: 5px 10px;
+}

@@ -1,0 +1,24 @@
+<?php
+
+namespace App\Http\Services\Contracts;
+
+use Illuminate\Http\Request;
+
+interface Xml
+{
+    /**
+     * Returns the query to retrieve the data.
+     */
+    public function query();
+
+    /**
+     * Maps the collection.
+     */
+    public function map($item, $key);
+
+    /**
+     * Generates the XML.
+     */
+    public function generate();
+}
+

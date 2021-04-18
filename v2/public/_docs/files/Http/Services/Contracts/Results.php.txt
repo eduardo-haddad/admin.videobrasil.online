@@ -1,0 +1,14 @@
+<?php
+
+namespace App\Http\Services\Contracts;
+
+use Illuminate\Http\Request;
+
+interface Results
+{
+    /**
+     * @param array $value
+     */
+    public static function get(Request $request = null);
+}
+

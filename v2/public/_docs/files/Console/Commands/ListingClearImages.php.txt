@@ -1,0 +1,89 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+
+class ListingClearImages extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'listing:clear-images {--list}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Delete all listing folders that are not being used.';
+
+    /**
+     *
+     */
+    protected $path = '/var/www/vhosts/agenteimovel.com/media/images/p1/10';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        if(!is_dir($this->path)){
+            $this->error('Defined path isn\'t a directory.');
+            return;
+        }
+
+        $scan = collect(array_diff(scandir($this->path), array('..', '.')));
+
+        // Filter out files and anything that isn't a directory
+        $listing_ids = $scan->filter(function($folder){
+            return is_dir($this->path . '/' . $folder);
+        });
+
+        $this->info(sprintf('%s folder(s) found.', $listing_ids->count()));
+
+        if($listing_ids){
+            // Filter out the folders that are related to an existing listing
+            $not_found = $listing_ids->filter(function($id){
+                return !\App\Parser\Listing::find($id);
+            });
+
+            $not_found = $not_found->filter(function($id){
+                return \App\Listing\Listing::where('listing_display_photo', 'like', 'p1/10/' . $id . '/%')->doesntExist();
+            });
+
+            $this->info(sprintf('%s listing(s) not found.', $not_found->count()));
+
+            if($this->option('list')){
+                $not_found->each(function($folder){
+                    $this->info($folder);
+                });
+            } else {
+                $answer = $this->ask('Delete folders not related to any existing listing? (y/n)');
+
+                if($answer == 'y'){
+                    $not_found->each(function($folder){
+                        $this->info(sprintf('Deleting folder %s...', $folder));
+                        $command = 'sudo rm -R ' . $this->path . '/' . $folder;
+                        exec($command);
+                    });
+                }
+            }
+        }
+    }
+}
+

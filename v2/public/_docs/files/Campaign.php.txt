@@ -1,0 +1,279 @@
+<?php
+
+namespace App;
+
+use Carbon\Carbon;
+use App\Relations\PivotEventTrait;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Traits\LogsActivity;
+
+class Campaign extends Model
+{
+    use SoftDeletes, LogsActivity, PivotEventTrait;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'db_res_utf8.res_campaign';
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = ['id'];
+
+    /**
+     * The attributes that should be mutated to dates.
+     *
+     * @var array
+     */
+    protected $dates = ['deleted_at'];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'unpublish_listings' => 'boolean',
+        'status' => 'boolean',
+    ];
+
+    /**
+     * The attributes that need to be logged.
+     */
+    protected static $logAttributes = ['*'];
+
+    /**
+     * Set to true to logged only attributes
+     * that were actually changed after the update.
+     */
+    protected static $logOnlyDirty = true;
+
+    /**
+     * Get listings for the Campaign.
+     */
+    public function listings()
+    {
+        return $this->belongsToMany('App\Listing\Listing', 'db_res_utf8.res_campaign_listing', 'campaign_id', 'listing_id');
+    }
+
+    /**
+     * Get the leads generated for the Campaign.
+     */
+    public function leads()
+    {
+        return $this->hasMany('App\Lead\Lead');
+    }
+
+    /**
+     * Set the Campaign's start date.
+     *
+     * @param  string  $value
+     * @return void
+     */
+    public function setStartDateAttribute($value)
+    {
+        $this->attributes['start_date'] = date_create_from_format('d/m/Y', $value);
+    }
+
+    /**
+     * Set the Campaign's end date.
+     *
+     * @param  string  $value
+     * @return void
+     */
+    public function setEndDateAttribute($value)
+    {
+        $this->attributes['end_date'] = date_create_from_format('d/m/Y', $value);
+    }
+
+    /**
+     * Set the Campaign's lead value.
+     */
+    public function setLeadPriceAttribute($value)
+    {
+        $value = str_replace('R$ ', '', $value);
+        $value = floatval(str_replace(',', '.', str_replace('.', '', $value)));
+        settype($value, 'double');
+        $this->attributes['lead_price'] = $value;
+    }
+
+    /**
+     * Get the Campaign's overall status.
+     */
+    public function getOverallStatusAttribute()
+    {
+        if(!isset($this->leads_unique_count)){
+          $leads_unique_count = \App\Lead\Lead::where('campaign_id', $this->id)
+                                         ->disqualified(false)
+                                         ->unique()
+                                         ->count();
+        } else {
+          $leads_unique_count = $this->leads_unique_count;
+        }
+
+        $today = Carbon::today();
+        $expired = $leads_unique_count >= $this->budget || $this->end_date < $today;
+
+        if($expired){
+            return 'expired';
+        }
+
+        if(!$this->status){
+            return 'paused';
+        }
+
+        if($this->start_date > $today && $this->status){
+            return 'scheduled';
+        }
+
+        if($this->start_date <= $today && $this->status){
+            return 'active';
+        }
+    }
+
+    /**
+     * Get the Campaign's context status based on overall status.
+     */
+    public function getStatusContextAttribute()
+    {
+        $classes = [
+            'paused' => 'warning',
+            'active' => 'success',
+            'scheduled' => 'info',
+            'expired' => 'active'
+        ];
+
+        return $classes[$this->overall_status];
+    }
+
+    /**
+     * Get the Campaign's total revenue based on loaded "leads_unique_count".
+     */
+    public function getRevenueAttribute()
+    {
+        throw_if(
+            !isset($this->leads_unique_count),
+            \Exception::class,
+            'Missing leads_unique_count attribute'
+        );
+
+        return $this->lead_price * $this->leads_unique_count;
+    }
+
+    /**
+     * Get the Campaign's expected delivery rate to achieve the budget
+     * based on loaded "leads_unique_count".
+     */
+    public function getExpectedDeliveryAttribute()
+    {
+        throw_if(
+            !isset($this->leads_unique_count),
+            \Exception::class,
+            'Missing leads_unique_count attribute'
+        );
+
+        $today = Carbon::today();
+        $missing_leads = $this->budget - $this->leads_unique_count;
+
+        if($missing_leads <= 0){
+            return 'achieved';
+        }
+
+        if($this->end_date < $today) {
+            return 'expired';
+        }
+
+        return $missing_leads / ($this->end_date->diffInDays($today) + 1);
+    }
+
+    /**
+     * Scope a query to only include scheduled campaigns.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeScheduled($query)
+    {
+        return $query->notExpired()
+                     ->where('start_date', '>', date('Y-m-d'))
+                     ->where('status', true);
+    }
+
+    /**
+     * Scope a query to only include active campaigns.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->notExpired()
+                     ->where('start_date', '<=', date('Y-m-d'))
+                     ->where('status', true);
+    }
+
+    /**
+     * Scope a query to only include paused campaigns.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopePaused($query)
+    {
+        return $query->notExpired()
+                     ->where('status', false);
+    }
+
+    /**
+     * Scope a query to only include expired campaigns.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeExpired($query)
+    {
+        $raw = '(SELECT
+				    COUNT(*)
+                FROM
+				    `db_res_utf8`.`res_lead_management`
+			    WHERE
+				    `res_campaign`.`id` = `res_lead_management`.`campaign_id`
+			        AND `ga_ecommerce` = 1
+			        AND `disqualified` = 0
+                ) >= `res_campaign`.`budget`';
+
+        return $query->whereRaw($raw)
+                     ->orWhere('end_date', '<', date('Y-m-d'));
+    }
+
+    /**
+     * Scope a query to only include non expired campaigns.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeNotExpired($query)
+    {
+        $raw = '(SELECT
+				    COUNT(*)
+                FROM
+				    `db_res_utf8`.`res_lead_management`
+			    WHERE
+				    `res_campaign`.`id` = `res_lead_management`.`campaign_id`
+			        AND `ga_ecommerce` = 1
+			        AND `disqualified` = 0
+                ) < `res_campaign`.`budget`';
+
+        return $query->whereRaw($raw)
+                     ->where('end_date', '>=', date('Y-m-d'));
+    }
+}
+

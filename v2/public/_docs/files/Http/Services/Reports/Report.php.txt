@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Services\Reports;
+
+use Maatwebsite\Excel\Events\AfterSheet;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\Exportable;
+use Maatwebsite\Excel\Concerns\RegistersEventListeners;
+
+class Report implements WithEvents
+{
+    use Exportable, RegistersEventListeners;
+
+    /**
+     * Event gets raised at the end of the sheet process.
+     */
+    public static function afterSheet(AfterSheet $event)
+    {
+        $lastColumn = $event->sheet->getHighestColumn();
+        $range = range('A', $lastColumn);
+
+        // Set auto width for all columns
+        foreach($range as $column){
+            $event->sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Freeze the first row
+        $event->sheet->freezePane('A2');
+
+        // Add style to the header
+        $event->sheet->getStyle('A1:' . $lastColumn . '1')->applyFromArray([
+            'font' => [
+                'size' => 14,
+                'bold' => true
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                ]
+            ]
+        ]);
+    }
+}
+

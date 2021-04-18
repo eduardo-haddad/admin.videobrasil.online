@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Xml;
+use App\Broadcast;
+use Illuminate\Bus\Queueable;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Support\Facades\Storage;
+
+class GenerateXml implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /**
+     * @var \App\Xml
+     */
+    protected $model;
+
+    /**
+     * Create a new job instance.
+     *
+     * @return void
+     */
+    public function __construct(Xml $model)
+    {
+        $this->model = $model;
+    }
+
+    /**
+     * Execute the job.
+     *
+     * @return void
+     */
+    public function handle(Broadcast $broadcast)
+    {
+        $baseName = studly_case($this->model->name);
+
+        $reflection = new \ReflectionClass("App\Http\Services\Xmls\\$baseName");
+        $xml = $reflection->newInstance();
+
+        if($xml = $xml->generate()){
+            $filename = 'xmls/' . str_slug($this->model->name) . '.xml';
+
+            if(Storage::put($filename, $xml)){
+                $this->model->fill([
+                    'file' => $filename,
+                    'status' => 'ready'
+                ])->save();
+
+                $broadcast->trigger('xml-complete', [
+                    'id' => $this->model->id,
+                    'file' => asset('storage/' . $this->model->file)
+                ]);
+            }
+        }
+    }
+}
+

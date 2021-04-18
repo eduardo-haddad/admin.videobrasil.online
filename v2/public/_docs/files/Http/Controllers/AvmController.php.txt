@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\AVM\Building;
+use App\AVM\Property;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class AvmController extends Controller
+{
+    /**
+     * @return \Illuminate\Http\Response
+     */
+    public function claim(Request $request)
+    {
+        $building = null;
+        $searchString = $request->get('search_string');
+        $toggleStatus = (int)$request->get('toggle_status');
+        $type = $request->get('type');
+        if ($searchString) {
+            $building = Building::where('building_id', $searchString)->first();
+        }
+        if ($toggleStatus && in_array($type, ['building', 'property'])) {
+            switch ($type) {
+                case 'building':
+                    if (!$building || $toggleStatus !== $building->building_id) {
+                        $building = Building::where('building_id', $toggleStatus)->first();
+                    }
+                    if (!$building) {
+                        return redirect()->back()->withErrors('Não foi possível encontrar a construção');
+                    }
+                    $newStatus = !$building->status;
+                    $building->status = $newStatus;
+                    Property::where('building_id', $building->building_id)->update(array('status' => $newStatus));
+                    Property\Type::where('building_id', $building->building_id)->update(array('status' => $newStatus));
+                    $building->save();
+                    return redirect()->back()->with('success', 'Status alterado com sucesso!');
+                    break;
+                case 'property':
+                    $property = Property::where('property_id', $toggleStatus)->first();
+                    if (!$property) {
+                        return redirect()->back()->withErrors('Não foi possível encontrar a construção');
+                    }
+                    $newStatus = !$property->status;
+                    $property->status = $newStatus;
+                    $property->save();
+                    return redirect()->back()->with('success', 'Status alterado com sucesso!');
+                    break;
+            }
+        }
+        return view('avm.claim', [
+            'building' => $building,
+            'searchString' => $searchString,
+        ]);
+    }
+}
+

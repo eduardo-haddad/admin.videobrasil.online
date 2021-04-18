@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Http\ViewComposers;
+
+use App\Client\Group;
+use App\Client\Client;
+use Illuminate\View\View;
+use Illuminate\Http\Request;
+
+class GroupComposer
+{
+    private $request;
+
+    /**
+     * Create a new group composer.
+     *
+     * @param  Illuminate\Http\Request  $request
+     * @return void
+     */
+    public function __construct(Request $request)
+    {
+        $this->request = $request;
+    }
+
+    /**
+     * Bind data to the view.
+     *
+     * @param  View  $view
+     * @return void
+     */
+    public function compose(View $view)
+    {
+        $groups = Group::has('clients')
+               ->select('id', 'name')
+               ->orderBy('name')
+               ->get();
+
+        $clients = [];
+
+        if($this->request->filled('by_group')){
+            $clients = Client::whereHas('group', function($query){
+                $query->whereIn('id', $this->request->get('by_group'));
+            })->orderBy('user_firstname')->get();
+        }
+
+        $view->with([
+            'groups' => $groups,
+            'clients' => $clients
+        ]);
+    }
+}
+

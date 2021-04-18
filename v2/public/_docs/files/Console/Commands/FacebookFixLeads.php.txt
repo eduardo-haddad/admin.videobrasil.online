@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Phone;
+use App\Lead\Lead;
+use Carbon\Carbon;
+use Facebook\Facebook;
+use Illuminate\Console\Command;
+
+class FacebookFixLeads extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'facebook:fix-leads';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Fix leads information from Facebook.';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        $timezone = new \DateTimeZone(config('app.timezone'));
+        $from_date = $this->ask('Do you want to fix the leads from which day? (Y-m-d)');
+
+        $this->fb = new Facebook([
+            'app_id' => env('FACEBOOK_APP_ID'),
+            'app_secret' => env('FACEBOOK_APP_SECRET'),
+            'default_graph_version' => 'v2.12',
+            'default_access_token' => env('FACEBOOK_ACCESS_TOKEN'),
+        ]);
+
+        $leads = Lead::where('listing_coming_source', 'leads-ad')
+                     ->where('datetime', '>=', Carbon::createFromFormat('Y-m-d', $from_date)->startOfDay())
+                     ->get();
+
+        $leads->each(function($lead) use ($timezone){
+            try {
+                $response = $this->fb->get('/' . $lead->transaction_id . '?fields=adset_name,field_data,created_time');
+                $leadgen = $response->getGraphNode()->asArray();
+            } catch (\Exception $e){
+                $this->error($e->getMessage());
+                return;
+            }
+
+            // Map field_data into key => value pairs
+            $user = [];
+            foreach($leadgen['field_data'] as $field){
+                if($field['name'] == 'phone_number'){
+                    $user[$field['name']] = (new Phone($field['values'][0]))->format('N');
+                } else {
+                    $user[$field['name']] = $field['values'][0];
+                }
+            }
+
+            $lead->fromphone1 = $user['phone_number'];
+            $lead->datetime = $leadgen['created_time']->setTimezone($timezone);
+            $lead->save();
+        });
+    }
+}
+

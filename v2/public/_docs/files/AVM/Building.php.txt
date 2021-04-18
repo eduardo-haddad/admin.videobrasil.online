@@ -1,0 +1,148 @@
+<?php
+
+namespace App\AVM;
+
+use App\Traits\DocumentTrait;
+use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+
+class Building extends Model
+{
+    use LogsActivity, DocumentTrait;
+    const CREATED_AT = 'created';
+    const UPDATED_AT = 'updated';
+
+    /**
+     * The column name of the primary key
+     *
+     * @var integer
+     */
+    protected $primaryKey = 'building_id';
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'avmdb.building';
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = ['building_id'];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'created' => 'date',
+        'updated' => 'date',
+        'status' => 'boolean',
+    ];
+
+    /**
+     * The attributes that need to be logged.
+     */
+    protected static $logAttributes = ['*'];
+
+    /**
+     * Set to true to logged only attributes
+     * that were actually changed after the update.
+     */
+    protected static $logOnlyDirty = true;
+
+    public function getUnabbreviatedTypeCode()
+    {
+        $types = [
+            'C' => 'Casa',
+            'A' => 'Apartamento',
+            'S' => 'Sobrado',
+        ];
+        return isset($types[$this->building_type_code]) ? $types[$this->building_type_code] : 'Indefinido';
+    }
+
+    /**
+     * Return document_1 formatted as CPF or CNPJ
+     *
+     * @return string
+     */
+    public function getFormattedDocument1()
+    {
+        return $this->parseDocument($this->document_1);
+    }
+
+
+    /**
+     * Return document_2 formatted as CPF or CNPJ
+     *
+     * @return string
+     */
+    public function getFormattedDocument2()
+    {
+        return $this->parseDocument($this->document_2);
+    }
+
+
+    /**
+     * Return numero_contribuinte formatted
+     *
+     * @return string
+     */
+    public function getFormattedNumeroContribuinte()
+    {
+        return $this->parseNumeroContribuinte($this->numero_contribuinte);
+    }
+
+    /**
+     * Get the street of the building.
+     */
+    public function street()
+    {
+        return $this->belongsTo(Street::class, 'street_id', 'street_id');
+    }
+
+    /**
+     * Get the neighborhood of the building.
+     */
+    public function neighborhood()
+    {
+        return $this->belongsTo(Neighborhood::class, 'neighborhood_id');
+    }
+
+    /**
+     * Get the city of the building.
+     */
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id');
+    }
+
+    /**
+     * Get the cep of the building.
+     */
+    public function cep()
+    {
+        return $this->belongsTo(CEP::class, 'cep_id');
+    }
+
+    /**
+     * Get the properties for the building.
+     */
+    public function properties()
+    {
+        return $this->hasMany(Property::class, 'building_id')->orderByRaw('CAST(property_number AS UNSIGNED)');
+    }
+
+    /**
+     * Get the properties for the building.
+     */
+    public function propertyTypes()
+    {
+        return $this->hasMany(Property\Type::class, 'building_id');
+    }
+}
+

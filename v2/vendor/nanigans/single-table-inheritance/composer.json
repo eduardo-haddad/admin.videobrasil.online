@@ -1,0 +1,40 @@
+{
+  "name": "nanigans/single-table-inheritance",
+  "description": "Single Table Inheritance Trait",
+  "keywords": ["single", "table", "inheritance", "laravel", "eloquent", "model"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Jon Palmer",
+      "email": "jpalmer@nanigans.com"
+    }
+  ],
+  "require": {
+    "php": ">= 5.5.9",
+    "illuminate/database": ">= 5.2",
+    "illuminate/support": ">= 5.2"
+  },
+  "require-dev": {
+    "mockery/mockery": "0.9.*|~1.0",
+    "phpunit/phpunit": "~4.8|~5.2|~6.0|~7.0",
+    "orchestra/testbench": "3.2.*|3.5.*|3.6.*",
+    "orchestra/database": "3.2.*|3.5.*|3.6.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Nanigans\\SingleTableInheritance\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Nanigans\\SingleTableInheritance\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "branch-alias": {
+        "dev-master": "0.9.x-dev"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Requests;
+
+use App\Rules\PortalSerp;
+use Illuminate\Validation\Rule;
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreSnippet extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Extend the default getValidatorInstance method
+     * so fields can be modified or added before validation
+     *
+     * @return \Illuminate\Contracts\Validation\Validator
+     */
+    protected function getValidatorInstance()
+    {
+        $this->merge([
+            'uri' => '/' . trim($this->get('uri'), '/')
+        ]);
+
+        // Fire the parent getValidatorInstance method
+        return parent::getValidatorInstance();
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        if($id = $this->route('snippet')){
+            // Rules to update an existing snippet
+            return [
+                'uri' => ['required', 'string', 'max:255', new PortalSerp, Rule::unique('snippets')->ignore($id)],
+                'title' => 'nullable|string|max:255',
+                'content' => 'required|string'
+            ];
+        }
+
+        // Rules to register a new snippet
+        return [
+            'uri' => ['required', 'string', 'max:255', new PortalSerp, 'unique:snippets'],
+            'title' => 'nullable|string|max:255',
+            'content' => 'required|string'
+        ];
+    }
+}
+

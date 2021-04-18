@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreLeadQa extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            'wpp_sent_at' => 'nullable|date_format:d/m/Y H:i',
+            'phone_called_at' => 'nullable|date_format:d/m/Y H:i',
+            'phone_works' => 'nullable|in:t,w,d,cp,n',
+            'attempts' => 'nullable|regex:/[wt]{1,4}/',
+            'talk_channel' => 'nullable|in:w,t',
+            'first_talk_at' => 'nullable|date_format:d/m/Y H:i',
+            'hotlead' => 'nullable|date_format:d/m/Y H:i',
+            'talked_to_broker' => 'nullable|in:s,n,p,sr',
+            'booked_visit' => 'nullable|in:s,n,p,sr',
+            'searching_immobile' => 'nullable|in:s,n,p,sr',
+            'purchase_started' => 'nullable|in:s,n,p,sr',
+            'purchase_started_product' => 'nullable|string',
+            'service_rate' => 'nullable|in:1,2,3,4,5,6,7,8,9,10,sr',
+            'visited' => 'nullable|in:s,n,sr',
+            'purchased' => 'nullable|in:s,n,sr',
+            'purchased_product' => 'nullable|string',
+            'callback.channel' => 'nullable|required_with:callback.answered_at,callback.note|in:w,t',
+            'callback.answered_at' => 'nullable|date_format:d/m/Y H:i',
+            'callback.note' => 'nullable|string|max:255'
+        ];
+    }
+}
+

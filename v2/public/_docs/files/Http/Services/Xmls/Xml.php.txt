@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Http\Services\Xmls;
+
+use Spatie\ArrayToXml\ArrayToXml;
+
+abstract class Xml
+{
+    /**
+     * Defines the root tag element of the XML.
+     */
+    protected $rootTag = 'root';
+
+    /**
+     * Defines the tag of each child element of the XML.
+     */
+    protected $itemTag = 'item';
+
+    /**
+     * Forces the child class to implement.
+     */
+    abstract public function query();
+
+    /**
+     * Implement the default map method. It should be overwritten by the child class
+     * if any value needs to be handled differently.
+     */
+    public function map($item, $key){
+        return $item;
+    }
+
+    /**
+     * Implement the default generate method.
+     */
+    public function generate()
+    {
+        // Retrieve the data and map the collection
+        $data = $this->query()->get()->transform([$this, 'map']);
+        // This is needed to set the tag name of each item
+        $result = [$this->itemTag => $data->toArray()];
+        // Convert to array and then to XML
+        return ArrayToXml::convert($result, $this->rootTag);
+    }
+}
+

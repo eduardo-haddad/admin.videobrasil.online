@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Http\Controllers\Lead;
+
+use App\Lead\Qa\ContactAttempt;
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+
+class ContactAttemptController extends Controller
+{
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit(Request $request, $id)
+    {
+        $contact_attempt = ContactAttempt::find($id);
+
+        if($request->wantsJson()){
+            return view('contact-attempts.form', [
+                'contact_attempt' => $contact_attempt
+            ]);
+        }
+
+        abort(404);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param App\Http\Requests\StoreLeadQa $request
+     * @param int $id
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'channel' => 'required|in:w,t',
+            'answered_at' => 'nullable|date_format:d/m/Y H:i',
+            'note' => 'nullable|string|max:255'
+        ]);
+
+        $contact_attempt = ContactAttempt::find($id);
+        $contact_attempt->fill($request->all());
+        $contact_attempt->save();
+
+        if($request->wantsJson()){
+            return view('leads.qa.callback', [
+                'callback' => $contact_attempt
+            ]);
+        }
+    }
+}
+

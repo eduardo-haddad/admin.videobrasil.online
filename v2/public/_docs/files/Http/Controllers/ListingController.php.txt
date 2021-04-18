@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Listing\Listing;
+use Illuminate\Http\Request;
+
+class ListingController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request)
+    {
+        if($request->wantsJson()){
+            $listings = Listing::with([
+                'newconst:listing_id,listing_title',
+                'client:user_id,user_name,group_id',
+                'client.group:id,name',
+                'campaigns' => function($query){
+                    $query->notExpired();
+                }
+            ])
+            ->select('listing_id', 'listing_user_id', 'listing_state', 'listing_city', 'searchsource_onoff')
+            ->where('listing_status', '1');
+
+            if($clients = $request->get('clients')){
+                $listings->whereIn('listing_user_id', json_decode($clients));
+            }
+
+            if($not_in = $request->get('not_in')){
+                $listings->whereNotIn('listing_id', json_decode($not_in));
+            }
+
+            return response()->json($listings->get());
+        }
+
+        // Let's abort since listings index is not implemented yet
+        abort(404);
+    }
+}
+

@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Http\ViewComposers;
+
+use App\User;
+use Illuminate\View\View;
+
+
+class AgentsComposer
+{
+    /**
+     * Bind data to the view.
+     *
+     * @param  View  $view
+     * @return void
+     */
+    public function compose(View $view)
+    {
+        $view->with('agents', User::has('qas')->get()->pluck('name', 'id')->toArray());
+    }
+}
+

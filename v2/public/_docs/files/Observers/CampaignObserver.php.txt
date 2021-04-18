@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Observers;
+
+use App\Campaign;
+
+class CampaignObserver
+{
+    /**
+     * Listen to the Campaign saved event.
+     *
+     * @param  \App\Campaign  $user
+     * @return void
+     */
+    public function saved(Campaign $campaign)
+    {
+        $campaign->load('listings');
+
+        // Note: We're updating each model at a time to Trigger ORM Events.
+        //       When issuing a mass update, models are never retrieved.
+
+        if($campaign->overall_status == 'active'){
+            // If Campaign is active, publish all Listings attached.
+            $campaign->listings->each(function($listing){
+                $listing->update(['searchsource_onoff' => '1']);
+            });
+        }
+
+        if($campaign->unpublish_listings && ($campaign->overall_status == 'paused' || $campaign->overall_status == 'expired')){
+            // If Campaign is paused or expired and is set to unpublish Listings, unpublish all Listings.
+            $campaign->listings->each(function($listing){
+                $listing->update(['searchsource_onoff' => '0']);
+            });
+        }
+    }
+
+    /**
+     * Listen to the Campaign deleted event.
+     *
+     * @param  \App\Campaign  $user
+     * @return void
+     */
+    public function deleted(Campaign $campaign)
+    {
+        // Note: We're updating each model at a time to Trigger ORM Events.
+        //       When issuing a mass update, models are never retrieved.
+
+        if($campaign->unpublish_listings){
+            // If Campaign is deleted and is set to unpublish Listings, unpublish all listings.
+            $campaign->listings->each(function($listing){
+                $listing->update(['searchsource_onoff' => '0']);
+            });
+        }
+    }
+}
+

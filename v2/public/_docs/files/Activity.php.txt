@@ -1,0 +1,51 @@
+<?php
+
+namespace App;
+
+use DB;
+use Spatie\Activitylog\Models\Activity as ActivityBase;
+
+class Activity extends ActivityBase
+{
+    /**
+     * Scope a query to get the last inserted App\Lead\Qa\Attempt for each App\Lead\Qa
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeLastAttempts($query, $qas = null)
+    {
+        $raw = '(SELECT
+                    MAX(subject_id) AS attempt_id
+                FROM
+                    `activity_log`
+                WHERE
+                    subject_type = "App\\\Lead\\\Qa\\\Attempt"
+                    AND description = "created"
+                GROUP BY JSON_UNQUOTE(properties->"$.attributes.lead_qa_id")
+                ) AS a1';
+
+        $query->select('att.id', 'att.lead_qa_id', 'att.channel')
+              ->from(DB::raw($raw))
+              ->join('lead_qa_attempts AS att', 'att.id', '=', 'a1.attempt_id');
+
+        if($qas){
+            $query->whereIn('att.lead_qa_id', $qas);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Scope a query to get first_talk_at entry updates.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeFirstTalks($query)
+    {
+        return $query->whereNotNull(DB::raw('JSON_UNQUOTE(properties->"$.attributes.first_talk_at")'))
+                     ->where(DB::raw('JSON_UNQUOTE(properties->"$.attributes.first_talk_at")'), '<>', 'null');
+    }
+}
+

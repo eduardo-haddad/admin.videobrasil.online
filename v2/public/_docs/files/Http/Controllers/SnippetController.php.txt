@@ -1,0 +1,119 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Validator;
+use App\Snippet;
+use App\Rules\PortalSerp;
+use App\Http\Requests\StoreSnippet;
+use Illuminate\Http\Request;
+
+class SnippetController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request)
+    {
+        $snippets = Snippet::orderBy('created_at', 'DESC');
+
+        if($request->filled('search_string') && $search_string = $request->get('search_string')){
+            $snippets->where(function($query) use($search_string){
+                $query->where('uri', 'like', '%' . $search_string . '%')
+                      ->orWhere('title', 'like', '%' . $search_string . '%')
+                      ->orWhere('content', 'like', '%' . $search_string . '%');
+            });
+        }
+
+        return view('snippets.index', [
+            'snippets' => $snippets->paginate(15)
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        return view('snippets.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param App\Http\Requests\StoreSnippet $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(StoreSnippet $request)
+    {
+        Snippet::create($request->all());
+
+        return redirect()->route('snippets.index')
+                         ->with('success', 'Snippet criado com sucesso!');
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        $snippet = Snippet::find($id);
+
+        return view('snippets.edit', [
+            'snippet' => $snippet
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param App\Http\Requests\StoreSnippet $request
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(StoreSnippet $request, $id)
+    {
+        Snippet::find($id)->fill($request->all())->save();
+
+        return redirect()->route('snippets.index')
+                         ->with('success', 'Snippet atualizado com sucesso!');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param int $id
+     */
+    public function destroy($id)
+    {
+        Snippet::destroy($id);
+    }
+
+    /**
+     * Validate the given $_GET['uri'] parameter against \App\Rules\PortalSerp
+     * and returns true if succeeds.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function ping(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'uri' => ['required', new PortalSerp]
+        ]);
+
+        if($validator->fails()){
+            return response()->json(false);
+        }
+
+        return response()->json(true);
+    }
+}
+

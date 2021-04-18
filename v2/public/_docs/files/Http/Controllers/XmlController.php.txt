@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Artisan;
+use App\Xml;
+use App\Jobs\GenerateXml;
+use Illuminate\Http\Request;
+
+class XmlController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request)
+    {
+        $xmls = Xml::orderBy('updated_at', 'DESC');
+
+        return view('xmls.index', [
+            'xmls' => $xmls->paginate(15)
+        ]);
+    }
+
+    /**
+     * Reload the XML based on given $id.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $id
+     */
+    public function reload(Request $request, $id)
+    {
+        Artisan::call('xml:generate', ['id' => $id]);
+
+        return redirect()->back()->with('success', 'O XML está sendo processado, aguarde.');
+    }
+}
+

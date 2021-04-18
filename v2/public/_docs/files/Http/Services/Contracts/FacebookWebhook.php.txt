@@ -1,0 +1,12 @@
+<?php
+
+namespace App\Http\Services\Contracts;
+
+interface FacebookWebhook
+{
+    /**
+     * @param array $value
+     */
+    function handle(array $value);
+}
+

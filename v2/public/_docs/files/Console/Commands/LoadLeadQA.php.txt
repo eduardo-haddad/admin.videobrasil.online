@@ -1,0 +1,313 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Lead\Lead;
+use Google_Client;
+use Google_Service_Sheets;
+use Google_Service_Exception;
+use Google_Service_Sheets_ValueRange;
+use Illuminate\Console\Command;
+
+class LoadLeadQA extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'load:lead-qa';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Loads data from Lead QA Spreadsheet into the database';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        $sheetId = "1PjH-Ib3WE-vWgR29shNkBYCVCs77mUlCNvNFnTaqLNg";
+        $credentials = [
+            "access_token" => "ya29.GltLBfrt5TufH1L-LkqvQQ-RB9R4709C0T_OueIJjBN7lF2bevic8Km3KEsSL2zk_0b2uNRyjvLcSHFExJZEUP8UXIZrcK8PxvKMFIIzJWRaAdddVbYCwXrk_ULY",
+            "token_type" => "Bearer",
+            "expires_in" => "3600",
+            "refresh_token" => "1/hhUwwlYcCKYSYhtFZ5G07KFLoCvhNCfZ8CUzRSGQBrQ",
+            "created" => "1516726735"
+        ];
+
+        $client = new Google_Client();
+        $client->setAuthConfig(config_path('google.json'));
+        $client->setAccessToken($credentials);
+        $service = new Google_Service_Sheets($client);
+
+        // Get all ranges
+        $result = $service->spreadsheets->get($sheetId);
+        $sheets = $result->getSheets();
+        $ranges = [];
+
+        foreach ($sheets as $sheet) {
+            $rowCount = $sheet->getProperties()->getGridProperties()->getRowCount();
+            $tabTitle = $sheet->getProperties()->getTitle();
+
+            if(!in_array($tabTitle, ['Total não usa', 'all_fichas', 'Sheet14', 'Copy of Página8', 'Dados para corrigir', 'all_leads_from_feb'])){
+                $ranges[] = $tabTitle . '!A2:AC' . $rowCount;
+            }
+        }
+
+        // Get all rows from all tabs
+        $result = $service->spreadsheets_values->batchGet($sheetId, ['ranges' => $ranges]);
+        $valueRanges = $result->getValueRanges();
+        $maps = [];
+
+        foreach($valueRanges as $range){
+            $rangeValues = $range->getValues();
+            $rangeName = substr($range->getRange(), 0, strpos($range->getRange(), '!'));
+
+            // Filter out leads with no date, time, email or listing id
+            $filter = array_filter($rangeValues, function($row){
+                return !empty($row[0]) && !empty($row[1]) && !empty($row[3]) && !empty($row[28]);
+            });
+
+            $maps[$rangeName] = array_map(function($row){
+                $map = [
+                    'datetime' => $this->parseDateTime($row[0] . ' ' . $row[1]),
+                    'fromname' => $row[2],
+                    'fromemail' => trim($row[3]),
+                    'fromphone1' => $row[4],
+                    'listing' => [
+                        'id' => trim($row[28]),
+                        'newconst' => [
+                            'listing_title_pt' => $row[5]
+                        ],
+                    ],
+                    'qa' => [
+                        'wpp_sent_at' => $this->parseDate($row[8]),
+                        'phone_called_at' => $this->parseDate($row[9]),
+                        'phone_works' => $this->parseAnswer($row[10], 'phone_works'),
+                        'attempts' => $this->parseAttempts($row[11]),
+                        'talk_channel' => $this->parseAnswer($row[12], 'talk_channel'),
+                        'first_talk_at' => $this->parseDate($row[14]),
+                        'talked_to_broker' => $this->parseAnswer($row[15]),
+                        'booked_visit' => !empty($row[16]) ? $this->parseAnswer($row[16]) : (!empty($row[27]) ? 'p' : null),
+                        'searching_immobile' => $this->parseAnswer($row[17]),
+                        'purchase_started' => $this->parseAnswer($row[20]),
+                        'service_rate' => $this->parseAnswer($row[21], 'service_rate'),
+                        'visited' => $this->parseAnswer($row[23]),
+                        'purchased_product' => $this->parseAnswer($row[25]),
+                        'hotlead' => $this->parseDate($row[26]),
+                    ]
+                ];
+
+                // Filter out empty and null fields
+                $map['qa'] = array_filter($map['qa'], function($value){
+                    return $value !== null;
+                });
+
+                return $map;
+            }, $filter);
+
+            // Filter out leads with invalid datetime property
+            $maps[$rangeName] = array_filter($maps[$rangeName], function($lead){
+                return $lead['datetime'] !== null & $lead['datetime'] !== false;
+            });
+        }
+
+        $nomatches = [];
+
+        foreach($maps as $range => $map){
+            $matches = 0;
+            $failed = 0;
+            $updates = 0;
+
+            foreach($map as $key => $row){
+                $lead = Lead::whereRaw('DATE_FORMAT(datetime, "%d/%m/%Y %H:%i") = ?', [$row['datetime']->format('d/m/Y H:i')])
+                            ->where('fromemail', $row['fromemail'])
+                            ->where('listing_id', $row['listing']['id'])
+                            ->first();
+
+                if(!$lead){
+                    $lead = Lead::whereRaw('DATE_FORMAT(datetime, "%d/%m/%Y %H:%i") = ?', [$row['datetime']->format('m/d/Y H:i')])
+                                ->where('fromemail', $row['fromemail'])
+                                ->where('listing_id', $row['listing']['id'])
+                                ->first();
+                }
+
+                if($lead){
+                    $matches++;
+
+                    if(!$lead->qa){
+                        // Create QA if doesn't exists
+                        try{
+                            if(isset($row['qa']['attempts'])){
+                                $attempts = $row['qa']['attempts'];
+                                unset($row['qa']['attempts']);
+                            }
+
+                            $qa = $lead->qa()->create($row['qa']);
+
+                            if($attempts){
+                                $qa->attempts()->createMany($attempts);
+                            }
+                        } catch(\Exception $e){
+                            $failed++;
+                            $this->error($e->getMessage());
+                        }
+                    } else {
+                        // Update the existing QA
+                        $updates++;
+
+                        if($lead->qa->attempts->isEmpty() && isset($row['qa']['attempts'])){
+                            $attempts = $row['qa']['attempts'];
+                            unset($row['qa']['attempts']);
+                            $lead->qa->attempts()->createMany($attempts);
+                        }
+
+                        foreach($row['qa'] as $key => $value){
+                            if($lead->qa->$key == null){
+                                $lead->qa->$key = $value;
+                            }
+                        }
+
+                        $lead->qa->save();
+                    }
+                } else {
+                    $nomatches[] = [
+                        'tab' => $range,
+                        'row' => $key + 2,
+                        'email' => $row['fromemail'],
+                        'listing' => $row['listing']['id']
+                    ];
+                }
+            }
+
+            $this->info(sprintf('Tab: %s | Leads to match: %s | Matches: %s | Failed: %s | Updates: %s', $range, count($map), $matches, $failed, $updates));
+        }
+
+        if(!empty($nomatches)){
+            $this->info('Leads unable to match:');
+
+            foreach($nomatches as $nomatch){
+                $this->info(sprintf('Tab: %s | Row: %s | Email: %s | Listing: %s', $nomatch['tab'], $nomatch['row'], $nomatch['email'], $nomatch['listing']));
+            }
+        }
+    }
+
+    /**
+     * Tries to parse the given date
+     *
+     * @param string $date
+     */
+    private function parseDate($value)
+    {
+        $date =  false;
+        $tries = ['d/m/Y', 'j/m/Y', 'j/n/Y', 'Y-m-d'];
+
+        foreach($tries as $try){
+            $date = date_create_from_format($try, $value);
+
+            if($date){
+                break;
+            }
+        }
+
+        return ($date) ? $date->format('d/m/Y H:i') : null;
+    }
+
+    /**
+     * Tries to parse the given datetime
+     *
+     * @param string $date
+     * @param string $format
+     */
+    private function parseDateTime($value)
+    {
+        $date =  false;
+        $tries = ['d/m/Y H:i', 'd/m/Y G:i'];
+
+        foreach($tries as $try){
+            $date = date_create_from_format($try, $value);
+
+            if($date){
+                break;
+            }
+        }
+
+        return ($date) ? $date : null;
+    }
+
+    /**
+     * Tries to parse the asnwer
+     *
+     * @param string $value
+     * @param string $type
+     */
+    private function parseAnswer($value, $type = '')
+    {
+        $value = mb_strtolower($value);
+
+        if($value == 'não' || $value == 'nao'){
+            $value = 'n';
+        }
+
+        switch ($type) {
+            case 'talk_channel':
+                if(in_array($value, ['t', 'w'])){
+                    return $value;
+                }
+                break;
+
+            case 'phone_works':
+                if(in_array($value, ['t', 'w', 'd', 'cp', 'n'])){
+                    return $value;
+                }
+                break;
+
+            case 'service_rate':
+                if(in_array($value, range(1, 10)) || $value == 'sr'){
+                    return $value;
+                }
+                break;
+
+            default:
+                if(in_array($value, ['s', 'n', 'p', 'sr'])){
+                    return $value;
+                }
+                break;
+        }
+
+        return null;
+    }
+
+    /**
+     * Tries to partse the attempts
+     *
+     * @param string $value
+     */
+    private function parseAttempts($value)
+    {
+        if(empty($value)){
+            return [];
+        }
+
+        return array_map(function($attempt){
+            return ['channel' => $attempt];
+        }, str_split(strtolower($value)));
+    }
+}
+

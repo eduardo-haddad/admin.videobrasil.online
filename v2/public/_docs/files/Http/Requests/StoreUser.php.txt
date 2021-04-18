@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Hash;
+use App\User;
+use Illuminate\Validation\Rule;
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreUser extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        if($this->is('register')){
+            // Rules to register a new user
+            return [
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:6|confirmed',
+                'position' => 'nullable|string|max:255',
+                'roles' => 'nullable|array'
+            ];
+        }
+
+        // Rules to update an existing user
+        $user = $this->user();
+        $_user = User::find($this->route()->parameter('user')) ?: $user;
+
+        // Notes: 1. The unique email check is always made against the user that is being edited.
+        //        2. The password check is always made against the user that is logged in.
+
+        return [
+            'name' => 'required_without:status|string|max:255',
+            'email' => ['required_without:status', 'string', 'email', 'max:255', Rule::unique('users')->ignore($_user->id)],
+            'password' => ['required_with:new_password', function($attribute, $value, $fail) use($user) {
+                if(!empty($value) && !Hash::check($value, $user->password)){
+                    // Check if the typed password is the current user's password
+                    return $fail('The ' . $attribute . ' is invalid.');
+                }
+            }],
+            'new_password' => 'nullable|string|min:6|confirmed',
+            'position' => 'nullable|string|max:255',
+            'roles' => 'nullable|array',
+            'notifications' => 'nullable|array',
+            'status' => 'nullable|boolean'
+        ];
+    }
+}
+

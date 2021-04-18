@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Xml;
+use App\Jobs\GenerateXml;
+use Illuminate\Console\Command;
+
+class XmlGenerate extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'xml:generate {id?}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = '(Re)Generate all XMLs or a specific one based on given {id}';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        $xmls = Xml::where('status', '<>', 'processing');
+
+        if($id = $this->argument('id')){
+            $xmls->where('id', $id);
+        }
+
+        $xmls->get()->each(function($xml){
+            if(GenerateXml::dispatch($xml) && config('queue.default') != 'sync'){
+                $xml->status = 'processing';
+                $xml->save();
+            }
+        });
+    }
+}
+

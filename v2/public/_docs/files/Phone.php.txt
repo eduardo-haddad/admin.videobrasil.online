@@ -1,0 +1,92 @@
+<?php
+
+namespace App;
+
+use libphonenumber\PhoneNumberUtil;
+use libphonenumber\PhoneNumberFormat;
+
+class Phone
+{
+    /**
+     * @var string
+     */
+    protected $number;
+
+    /**
+     * @var string
+     */
+    protected $carrier = '21';
+
+    /**
+     * @var libphonenumber\PhoneNumberUtil
+     */
+    protected $util;
+
+    /**
+     *
+     */
+    public function __construct($number)
+    {
+        $this->number = preg_replace('/[\(\) \-]/', '', $number);
+        $this->util = PhoneNumberUtil::getInstance();
+    }
+
+    /**
+     *
+     */
+    public function __toString()
+    {
+        return $this->number;
+    }
+
+    /**
+     * Format the number into a given $pattern
+     *
+     * @param string $pattern
+     * @return string
+     */
+    public function format($pattern)
+    {
+        $number = $this->number;
+
+        if(strlen($number) <= 9){
+            // Add fake DDD in case the number doesn't have it
+            $number = '00' . $number;
+        }
+
+        if($pattern == 'M'){
+            // Note: [...] in Brazil a carrier code is essential for dialling long-distance domestically.
+            // If none has been provided at parsing time then we will return an empty string.
+            // From: https://github.com/googlei18n/libphonenumber/blob/master/FAQ.md
+            $number = $this->carrier . $number;
+        }
+
+        try {
+            $parse = $this->util->parse($number, 'BR');
+        } catch(\Exception $e) {
+            //report($e);
+            return $this->number;
+        }
+
+        switch ($pattern) {
+            case 'M':
+                $formatted = $this->util->formatNumberForMobileDialing($parse, 'BR', false);
+                $formatted = preg_replace('/^' . $this->carrier . '/', '', $formatted);
+                break;
+
+            case 'N':
+                $formatted = $this->util->format($parse, PhoneNumberFormat::NATIONAL);
+                break;
+
+            case 'I':
+                $formatted = $this->util->format($parse, PhoneNumberFormat::INTERNATIONAL);
+                break;
+
+            case 'E':
+                $formatted = $this->util->format($parse, PhoneNumberFormat::E164);
+        }
+
+        return !empty($formatted) ? preg_replace('/^00/', '', $formatted) : $this->number;
+    }
+}
+

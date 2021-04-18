@@ -1,0 +1,25 @@
+{
+    "name": "agenteimovel/feedback",
+    "description": "Lead Feedback System",
+    "version": "dev-master",
+    "authors": [
+        {
+            "name": "Daniel Trolezi",
+            "email": "daniel@agenteimovel.com.br"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Feedback\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Feedback\\Providers\\FeedbackServiceProvider"
+            ]
+        }
+    }
+}

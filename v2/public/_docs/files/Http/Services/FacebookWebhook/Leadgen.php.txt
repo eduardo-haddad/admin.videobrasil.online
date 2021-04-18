@@ -1,0 +1,97 @@
+<?php
+
+namespace App\Http\Services\FacebookWebhook;
+
+use Notification;
+use App\Notifications\InactiveListing;
+
+use App\User;
+use App\Phone;
+use App\Lead\Lead;
+use GuzzleHttp\Client;
+use App\Listing\Listing;
+
+class Leadgen extends FacebookWebhook
+{
+    /**
+     * Process 'leadgen' Webhook payload.
+     *
+     * @param array $value
+     */
+    public function handle(array $value)
+    {
+        $context = ['leadgen_id' => $value['leadgen_id']];
+        $this->log->info('Leadgen webhook received.', $context);
+
+        if(Lead::where('transaction_id', $value['leadgen_id'])->where('listing_coming_source', 'leads-ad')->first()){
+            $this->log->info('Leadgen was already salved.', $context);
+            return;
+        }
+
+        try {
+            $response = $this->fb->get('/' . $value['leadgen_id'] . '?fields=adset_name,field_data');
+            $lead = $response->getGraphNode()->asArray();
+        } catch(\Exception $e){
+            $this->log->error(sprintf('%s: %s', $e->getCode(), $e->getMessage()), $context);
+            return;
+        }
+
+        $this->log->info('Got lead data from Graph API.', $context);
+
+        // Map field_data into key => value pairs
+        $user = [];
+        foreach($lead['field_data'] as $field){
+            if($field['name'] == 'phone_number'){
+                $user[$field['name']] = (new Phone($field['values'][0]))->format('N');
+            } else {
+                $user[$field['name']] = $field['values'][0];
+            }
+        }
+
+        if(!isset($lead['adset_name'])){
+            $this->log->error('Adset name is missing. Aborting...', $context);
+            return;
+        }
+
+        // Get ListingID based on Adset's name
+        $pos = strpos($lead['adset_name'], '#') + 1;
+        $listing_id = substr($lead['adset_name'], $pos);
+        $this->log->info(sprintf('Got Listing ID %s from Adset name.', $listing_id), $context);
+
+        try{
+            $listing = Listing::findOrFail($listing_id);
+        } catch(\Exception $e){
+            $this->log->error(sprintf('%s: %s', $e->getCode(), $e->getMessage()), $context);
+            return;
+        }
+
+        if(!$listing->listing_status || !$listing->searchsource_onoff){
+            // If listing is inactive, send notification
+            $this->log->info('Listing is inactive, sending notification...', $context);
+            $users = User::subscribedTo(['inactive-listing'])->get();
+            Notification::send($users, new InactiveListing($listing));
+        }
+
+        $this->log->info('Preparing to send Lead via HTTP request...');
+
+        $queryString = http_build_query([
+            'listing_id' => $listing->listing_id,
+            'toname' => $listing->client->fullname,
+            'toemail' => $listing->client->user_email,
+            'fromname' => $user['full_name'],
+            'fromphone' => $user['phone_number'],
+            'fromemail' => $user['email'],
+            'alertsrec' => 1,
+            'thank' => 'you',
+            'transaction_id' => $value['leadgen_id'],
+            'listing_coming_source' => 'leads-ad'
+        ]);
+
+        $client = new Client;
+        $auth = [env('PORTAL_USERNAME'), env('PORTAL_PASSWORD')];
+        $response = $client->request('GET', env('PORTAL_URL') . '/Publish/Users/submitListing/agent_email.php?' . $queryString, ['auth' => $auth, 'http_errors' => false]);
+
+        $this->log->info(sprintf('Request sent. Response: %s Status Code: %s', $response->getBody(), $response->getStatusCode()), $context);
+    }
+}
+

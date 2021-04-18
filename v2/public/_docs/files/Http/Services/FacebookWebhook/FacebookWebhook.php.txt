@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Http\Services\FacebookWebhook;
+
+use App;
+use Facebook\Facebook;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\FirePHPHandler;
+
+abstract class FacebookWebhook
+{
+    /**
+     * @var $fb \Facebook\Facebook
+     */
+    protected $fb;
+
+    /**
+     * @var $log Monolog\Logger
+     */
+    protected $log;
+
+    /**
+     *
+     */
+    public function __construct()
+    {
+        $this->fb = new Facebook([
+            'app_id' => env('FACEBOOK_APP_ID'),
+            'app_secret' => env('FACEBOOK_APP_SECRET'),
+            'default_graph_version' => 'v2.12',
+            'default_access_token' => env('FACEBOOK_ACCESS_TOKEN'),
+        ]);
+
+        // Create a new Monolog instance
+        $this->log = new Logger(App::environment());
+        $this->log->pushHandler(new StreamHandler(storage_path('logs/facebook/webhook.log'), Logger::DEBUG));
+        $this->log->pushHandler(new FirePHPHandler());
+    }
+
+    /**
+     *
+     */
+    abstract public function handle(array $value);
+}
+

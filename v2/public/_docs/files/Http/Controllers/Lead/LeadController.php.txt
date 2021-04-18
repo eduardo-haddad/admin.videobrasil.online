@@ -1,0 +1,220 @@
+<?php
+
+namespace App\Http\Controllers\Lead;
+
+use DB;
+use App\User;
+use App\Lead\Qa;
+use App\Lead\Lead;
+use App\Traits\ReportTrait;
+use App\Http\Requests\StoreLead;
+use App\Http\Controllers\Controller;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+
+class LeadController extends Controller
+{
+    use ReportTrait;
+
+    /**
+     * Defines the Report subject type
+     */
+    protected $subjectType = Lead::class;
+
+    /**
+     * Defines the context of the Report
+     */
+    protected $reportContext = ['title' => 'Leads', 'filter' => 'leads.reports.filter'];
+
+    /**
+     * @var \App\Http\Services\Contracts\Result
+     */
+    private $result;
+
+    /**
+     *
+     */
+    public function __construct(\App\Http\Services\Contracts\Result $result)
+    {
+        $this->result = $result;
+    }
+
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request)
+    {
+        $leads = Lead::with([
+            'listing.client',
+            'listing.newconst',
+            'qa.agent',
+            'qa.attempts',
+            'qa.callbacks',
+            'qa.activity' => function($query){
+                $query->whereNull(DB::raw('JSON_UNQUOTE(properties->"$.attributes.user_id")'))
+                      ->whereNull(DB::raw('JSON_UNQUOTE(properties->"$.attributes.first_talk_at")'))
+                      ->whereNull(DB::raw('JSON_UNQUOTE(properties->"$.attributes.phone_works")'))
+                      ->whereNull(DB::raw('JSON_UNQUOTE(properties->"$.attributes.phone_called_at")'))
+                      ->whereNull(DB::raw('JSON_UNQUOTE(properties->"$.attributes.wpp_sent_at")'))
+                      ->where(DB::raw('JSON_UNQUOTE(properties->"$.attributes")'), '<>', '[]');
+            },
+            'qa.activity.causer'
+        ]);
+
+        if(($request->filled('by_agent') && $by_agent = $request->get('by_agent', 'all')) && !in_array('all', $by_agent)){
+            $leads->byAgent($by_agent, in_array('not_claimed', $by_agent));
+        }
+
+        if($request->filled('attempts')){
+            $leads->hasAttempts($request->get('attempts'));
+        }
+
+        if($request->filled('exclude')){
+            $leads->where(function($query) use($request){
+                $query->doesntHave('qa')
+                      ->orWhereHas('qa', function($query) use($request){
+                            if($request->input('exclude.invalid_phone')){
+                                $query->where(function($query){
+                                    $query->where('phone_works', '<>', 'n')
+                                          ->orWhereNull('phone_works');
+                                });
+                            }
+
+                            if($request->input('exclude.first_talk_at')){
+                                $query->whereNull('first_talk_at');
+                            }
+                      });
+            });
+        }
+
+        if($request->filled('from_date')){
+            $from_date = Carbon::createFromFormat('d/m/Y H:i', $request->get('from_date'));
+            $leads->withoutGlobalScope('may_1st')->where('datetime', '>=', $from_date);
+        } else {
+            $leads->fromMay1st();
+        }
+
+        if($request->filled('to_date')){
+            $to_date = Carbon::createFromFormat('d/m/Y H:i', $request->get('to_date'));
+            $leads->where('datetime', '<=', $to_date);
+        }
+
+        if($request->filled('by_client')){
+            $leads->whereIn('listing_user_id', $request->get('by_client'));
+        } elseif($request->filled('by_group')){
+            $leads->whereIn('user_group_id', $request->get('by_group'));
+        }
+
+        if($request->filled('search_string') && $search_string = $request->get('search_string')){
+            $leads->where(function($query) use($search_string){
+                $query->where('fromname', 'like', '%' . $search_string . '%')
+                      ->orWhere('fromemail', 'like', '%' . $search_string . '%')
+                      ->orWhere('fromphone1', 'like', '%' . $search_string . '%');
+            });
+        }
+
+        $leads->qualifiable()
+              ->newReleases()
+              ->orderBy('datetime', 'DESC');
+
+        return view('leads.index', [
+            'leads' => $leads->paginate($request->get('paginate', 15))
+        ]);
+    }
+
+    /**
+     * Claim the Lead.
+     * In another words, create a new App\Lead\Qa and associate with App\Lead\Lead and App\User.
+     *
+     * @param Illuminate\Http\Request $request
+     * @param int $id
+     */
+    public function claim(Request $request, $id)
+    {
+        $user = $request->user();
+        $lead = Lead::find($id);
+        $this->authorize('claim', $lead);
+
+        if(!$lead->qa){
+            DB::transaction(function () use($lead, $user) {
+                $qa = $lead->qa()->create()->agent()->associate($user);
+                $qa->save();
+            });
+        } else if(!$lead->qa->agent){
+            $lead->qa->agent()->associate($user);
+            $lead->qa->save();
+        } else {
+            abort(403);
+        }
+
+        return response()->json($user);
+    }
+
+    /**
+     * Unclaim the lead.
+     *
+     * @param int $id
+     */
+    public function unclaim($id)
+    {
+        if(($qa = Lead::find($id)->qa) && $agent = $qa->agent()){
+            $agent->dissociate()->save();
+        }
+    }
+
+    /**
+     * Display a group of reports.
+     */
+    public function results()
+    {
+        return view('leads.results.index', $this->result->get());
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit(Request $request, $id)
+    {
+        $lead = Lead::findOrFail($id);
+
+        if($request->wantsJson()){
+            return view('leads.form', [
+                'lead' => $lead
+            ]);
+        }
+
+        abort(404);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param App\Http\Requests\StoreLead $request
+     * @param int $id
+     */
+    public function update(StoreLead $request, $id = null)
+    {
+        $ids = $id !== null ? [$id] : json_decode($request->get('ids'));
+
+        foreach($ids as $id){
+            // Updating each model at a time to Trigger ORM Events.
+            $lead = Lead::find($id);
+            $lead->fill($request->except(['ids']));
+            $lead->save();
+        }
+
+        if($request->wantsJson()){
+            return response()->json([
+                'fromname' => $lead->first_name . '<span class="inner-focus-target">' . $lead->fromname . '</span>',
+                'fromemail' => str_limit($lead->fromemail, 5) . '<span class="inner-focus-target">' . $lead->fromemail . '</span>',
+                'fromphone1' => '<a target="_blank" class="btn-link" href="https://api.whatsapp.com/send?1=pt_BR&phone=' . str_replace('+', '', $lead->fromphone1->format('E')) . '">' . $lead->fromphone1->format('M') . '</a>'
+            ]);
+        }
+    }
+}
+

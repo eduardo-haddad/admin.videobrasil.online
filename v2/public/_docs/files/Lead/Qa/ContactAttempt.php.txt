@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Lead\Qa;
+
+use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+use Nanigans\SingleTableInheritance\SingleTableInheritanceTrait;
+
+class ContactAttempt extends Model
+{
+    use LogsActivity, SingleTableInheritanceTrait;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'lead_qa_contact_attempts';
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = ['id'];
+
+    /**
+     * The attributes that should be mutated to dates.
+     *
+     * @var array
+     */
+    protected $dates = [
+        'answered_at',
+    ];
+
+    /**
+     * The attributes that need to be logged.
+     */
+    protected static $logAttributes = ['*'];
+
+    /**
+     * Set to true to logged only attributes
+     * that were actually changed after the update.
+     */
+    protected static $logOnlyDirty = true;
+
+    /**
+     *
+     */
+    protected static $singleTableTypeField = 'type';
+
+    /**
+     *
+     */
+    protected static $singleTableSubclasses = [Attempt::class, Callback::class];
+
+    /**
+     * Get the lead QA that owns the Attempt.
+     */
+    public function qa()
+    {
+        return $this->belongsTo('App\Lead\Qa', 'lead_qa_id');
+    }
+
+    /**
+     * Set the answered_at attribute.
+     *
+     * @param  string  $value
+     * @return void
+     */
+    public function setAnsweredAtAttribute($value)
+    {
+        $this->attributes['answered_at'] = $value ? date_create_from_format('d/m/Y H:i', $value) : null;
+    }
+}
+

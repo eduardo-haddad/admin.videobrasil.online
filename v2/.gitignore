@@ -1,0 +1,17 @@
+/node_modules
+/public/hot
+/public/storage
+/public/info.php
+/storage/*.key
+/storage/logs/laravel.log
+/storage/logs/xml-integration.log
+#/vendor
+/vendor/**/.git
+/.idea
+/.git
+/.vagrant
+.env
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log

@@ -1,0 +1,57 @@
+<?php
+
+namespace App\AVM;
+
+use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+
+class State extends Model
+{
+    use LogsActivity;
+    const CREATED_AT = 'created';
+    const UPDATED_AT = 'updated';
+
+    /**
+     * The column name of the primary key
+     *
+     * @var integer
+     */
+    protected $primaryKey = 'state_id';
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'avmdb.state';
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = ['state_id'];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'created' => 'date',
+        'updated' => 'date',
+        'status' => 'boolean',
+    ];
+
+    /**
+     * The attributes that need to be logged.
+     */
+    protected static $logAttributes = ['*'];
+
+    /**
+     * Set to true to logged only attributes
+     * that were actually changed after the update.
+     */
+    protected static $logOnlyDirty = true;
+}
+

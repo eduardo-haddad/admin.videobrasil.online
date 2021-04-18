@@ -1,0 +1,12 @@
+{
+  "web": {
+    "client_id": "472935129057-q41qoufn6vnm997po56ibb8gnrn4nq7c.apps.googleusercontent.com",
+    "project_id": "agente-imovel",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://accounts.google.com/o/oauth2/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_secret": "RHXcy2RXb6_-jhQt3kaTGE4A",
+    "redirect_uris": ["https://agenteimovel.localhost/google/authorize.php", "https://dev.agenteimovel.com.br/google/authorize.php"],
+    "javascript_origins": ["https://agenteimovel.localhost", "https://dev.agenteimovel.com.br"]
+  }
+}

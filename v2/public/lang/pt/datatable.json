@@ -1,0 +1,14 @@
+{
+  "lengthMenu": "Mostrar _MENU_ resultados",
+  "search": "Pesquisar",
+  "info": "Mostrando de _START_ a _END_ do total de _TOTAL_ resultado(s)",
+  "infoEmpty": "",
+  "emptyTable": "Nenhum resultado encontrado.",
+  "zeroRecords": "Não há resultados para esse filtro.",
+  "paginate": {
+    "first":    "Primeira",
+    "previous": "Anterior",
+    "next":     "Próxima",
+    "last":     "Última"
+  }
+}

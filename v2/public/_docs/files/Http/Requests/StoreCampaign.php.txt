@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreCampaign extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            'name' => 'required_without:status|string',
+            'start_date' => 'required_without:status|date_format:d/m/Y',
+            'end_date' => 'required_without:status|date_format:d/m/Y',
+            'budget' => 'required_without:status|numeric',
+            'lead_price' => 'required_without:status|regex:/^R\$ [0-9]+(\.[0-9])?+(\,[0-9]{1,2})?$/',
+            'facebook_id' => 'nullable|string',
+            'unpublish_listings' => 'nullable|boolean',
+            'update_lead' => 'nullable|boolean',
+            'status' => 'nullable|boolean',
+            'listings' => 'nullable|array'
+        ];
+    }
+
+    /**
+     * Configure the validator instance.
+     *
+     * @param  \Illuminate\Validation\Validator  $validator
+     * @return void
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $start_date = date_create_from_format('d/m/Y', $this->get('start_date'));
+            $end_date = date_create_from_format('d/m/Y', $this->get('end_date'));
+
+            if($start_date > $end_date){
+                $validator->errors()->add('start_date', 'A data de início não pode ser posterior a data de término.');
+            }
+        });
+    }
+}
+

@@ -1,0 +1,283 @@
+<?php
+
+namespace App\Lead;
+
+use App\Phone;
+use App\Traits\ModelTrait;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Spatie\Activitylog\Traits\LogsActivity;
+
+class Lead extends Model
+{
+    use ModelTrait, LogsActivity;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'db_res_utf8.res_lead_management';
+
+    /**
+     * The primary key column.
+     *
+     * @var string
+     */
+    protected $primaryKey = 'lead_id';
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = ['id'];
+
+    /**
+     * Indicates if the model should be timestamped.
+     *
+     * @var bool
+     */
+    public $timestamps = false;
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'datetime' => 'datetime',
+        'ga_ecommerce' => 'boolean',
+        'disqualified' => 'boolean'
+    ];
+
+    /**
+     * The attributes that need to be logged.
+     */
+    protected static $logAttributes = ['*'];
+
+    /**
+     * Set to true to logged only attributes
+     * that were actually changed after the update.
+     */
+    protected static $logOnlyDirty = true;
+
+    /**
+     * Get the listing that owns the lead.
+     */
+    public function listing()
+    {
+        return $this->belongsTo('App\Listing\Listing', 'listing_id');
+    }
+
+    /**
+     * Get the campaign that owns the lead.
+     */
+    public function campaign()
+    {
+        return $this->belongsTo('App\Campaign');
+    }
+
+    /**
+     * Get the QA record associated with the lead.
+     */
+    public function qa()
+    {
+        return $this->hasOne('App\Lead\Qa', 'lead_id');
+    }
+
+    /**
+     * Get the Lead's first name.
+     */
+    public function getFirstNameAttribute()
+    {
+        return explode(' ', $this->fromname)[0];
+    }
+
+    /**
+     * Get the Lead's value.
+     */
+    public function getLeadValueAttribute($value)
+    {
+        return number_format($value, 2, ',', '.');
+    }
+
+    /**
+     * Set Lead's value.
+     */
+    public function setLeadValueAttribute($value)
+    {
+        $value =  floatval(str_replace(',', '.', str_replace('.', '', $value)));
+        settype($value, 'double');
+        $this->attributes['lead_value'] = $value;
+    }
+
+    /**
+     * Get the Lead's phone number.
+     */
+    public function getFromphone1Attribute($value)
+    {
+        return new Phone($value);
+    }
+
+    /**
+     * Get the Lead's message.
+     */
+    public function getMessageDetailAttribute($value)
+    {
+        return strip_tags($value);
+    }
+
+    /**
+     * Get information to send a Hotlead.
+     */
+    public function getHotleadAttribute()
+    {
+        $hotlead = [$this->datetime->format('d/m/Y H:i'), $this->fromname, $this->fromemail, $this->fromphone1->format('N')];
+
+        if($this->listing){
+            if($this->listing->client){
+                $hotlead[] = $this->listing->client->user_name;
+            }
+
+            if($this->listing->newconst){
+                $hotlead[] = $this->listing->newconst->listing_title_pt;
+            }
+        }
+
+        return implode(', ', $hotlead);
+    }
+
+    /**
+     * Scope a query to only include leads from May 1st 2017
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeFromMay1st($query)
+    {
+      return $query->where('datetime', '>=', Carbon::parse('first day of May 2017'));
+    }
+
+    /**
+     * Scope a query to only include leads generated today.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeNew($query)
+    {
+        return $query->where('datetime', '>=', date('Y-m-d'));
+    }
+
+    /**
+     * Scope a query to only include unique leads.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeUnique($query)
+    {
+        return $query->where('ga_ecommerce', true);
+    }
+
+    /**
+     * Scope a query to only include leads from new releases.
+     */
+    public function scopeNewReleases($query)
+    {
+        return $query->whereHas('listing', function($query){
+            $query->where('listing_type', 'lançamentos');
+        });
+    }
+
+    /**
+     * Scope a query to filter leads by agent and not claimed.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param array $by_agent
+     * @param boolean $not_claimed
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeByAgent($query, array $agent = [], $not_claimed = false)
+    {
+        $query->where(function($query) use($not_claimed, $agent){
+            if($not_claimed){
+                $query->doesntHave('qa')
+                      ->orDoesntHave('qa.agent');
+            }
+
+            if(count($agent)){
+                $query->orWhereHas('qa', function($query) use($agent){
+                    $query->whereIn('user_id', $agent);
+                });
+            }
+        });
+    }
+
+    /**
+     * Scope a query to include leads with the given number of attempts.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param array $attempts
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeHasAttempts($query, array $attempts)
+    {
+        $query->where(function($query) use($attempts){
+            foreach($attempts as $attempt){
+                if($attempt == 0){
+                  $query->doesntHave('qa');
+                }
+
+                $query->orHas('qa.attempts', $attempt);
+            }
+        });
+    }
+
+    /**
+     * Scope a query to only include disqualified leads.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param boolean $disq
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeDisqualified($query, $disq = true)
+    {
+        return $query->where('disqualified', $disq);
+    }
+
+    /**
+     * Scope a query to only include leads that can be qualified.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeQualifiable($query)
+    {
+        return $query->disqualified(false)
+                     ->orWhereNotIn('disqualified_reason_type', ['contact', 'costumer', 'other']);
+    }
+
+    /**
+     * Return the available report types.
+     */
+    public static function getReportTypes()
+    {
+        return [
+            'leads.no_contact_report' => 'Interesse sem contato de corretor'
+        ];
+    }
+
+    /**
+     * Return the report's name based on given $type
+     *
+     * @param string $type
+     */
+    public static function getReportByType($type)
+    {
+        return self::getReportTypes()[$type];
+    }
+}
+

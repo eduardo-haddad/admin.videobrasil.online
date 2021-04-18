@@ -1,0 +1,134 @@
+<?php
+
+namespace App\Http\Services\Results;
+
+use DB;
+use Carbon\Carbon;
+use App\Lead\Lead;
+use App\Http\Services\Contracts\Result as ResultInterface;
+
+class Campaign extends Result implements ResultInterface
+{
+    /**
+     * Gather data to build the Campaigns report
+     */
+    public function get()
+    {
+        $request = $this->request;
+        $from_date = Carbon::createFromFormat('d/m/Y', $request->get('from_date'));
+        $to_date = Carbon::createFromFormat('d/m/Y', $request->get('to_date'));
+
+        /*
+        |--------------------------------------------------------------------------
+        | Chart
+        |--------------------------------------------------------------------------
+        */
+
+        $leads = Lead::select(DB::raw(
+                        'SUM(CASE WHEN ga_ecommerce = 0 THEN 1 ELSE 0 END) AS leads,
+                         SUM(CASE WHEN ga_ecommerce = 1 THEN 1 ELSE 0 END) AS unique_leads,
+                         DATE_FORMAT(datetime, "%d/%m/%Y") AS created_at'
+                     ))->has('campaign')
+                       ->disqualified(false)
+                       ->whereDateTimeBetween('datetime', [$from_date, $to_date]);
+
+        if($this->request->filled('search_string') && $search_string = $this->request->get('search_string')){
+            $leads->whereHas('campaign', function($query) use($search_string){
+                $query->where('name', 'like', '%' . $search_string . '%');
+            });
+        }
+
+        $leads = $leads->groupBy('created_at')->get();
+
+        $datasets = [
+            [
+                'label' => 'Leads',
+                'data' => $leads->pluck('leads')->toArray(),
+                'backgroundColor' => 'rgba(251, 169, 25, 0.7)',
+                'borderColor' => '#FBA919',
+                'borderWidth' => '1',
+            ],
+            [
+                'label' => 'Leads Únicos',
+                'data' => $leads->pluck('unique_leads')->toArray(),
+                'backgroundColor' => 'rgba(38, 185, 154, 0.7)',
+                'borderColor' => '#26B99A',
+                'borderWidth' => '1'
+            ]
+        ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Campaigns & Summary
+        |--------------------------------------------------------------------------
+        */
+
+        $campaigns = \App\Campaign::withCount([
+            'listings',
+            'leads' => function($query){
+                $query->disqualified(false);
+            },
+            'leads as leads_per_period' => function($query) use($from_date, $to_date){
+                $query->disqualified(false)
+                      ->whereDateTimeBetween('datetime', [$from_date, $to_date]);
+            },
+            'leads as leads_unique_count' => function($query){
+                 $query->disqualified(false)
+                       ->unique();
+             },
+            'leads as leads_from_yesterday' => function($query) {
+                $query->disqualified(false)
+                      ->whereDate('datetime', Carbon::yesterday());
+            },
+            'leads as leads_from_today' => function($query) {
+                $query->disqualified(false)
+                      ->whereDate('datetime', Carbon::today());
+            }
+        ])->where(function($query) use($from_date, $to_date){
+            $query->whereHas('leads', function($query) use($from_date, $to_date){
+                // Campaigns that generated leads between the date range
+                $query->disqualified(false)
+                      ->whereDateTimeBetween('datetime', [$from_date, $to_date]);
+            })->orWhere(function($query) use($from_date, $to_date){
+                // Campaigns that were/are active between the date range
+                $query->whereBetween('start_date', [$from_date, $to_date])
+                      ->orWhereBetween('end_date', [$from_date, $to_date])
+                      ->orWhereRaw(DB::raw("'" . $from_date->format('Y-m-d') . "' BETWEEN start_date AND end_date"))
+                      ->orWhereRaw(DB::raw("'" . $to_date->format('Y-m-d') . "' BETWEEN start_date AND end_date"));
+            });
+        });
+
+        if(isset($search_string)){
+            $campaigns->where('name', 'like', '%' . $search_string . '%');
+        }
+
+        $campaigns = $campaigns->orderBy('created_at', 'ASC')->get();
+
+        $summary = $campaigns->isNotEmpty() ? [
+            'listings' => $campaigns->sum('listings_count'),
+            'budget' => $campaigns->sum('budget'),
+            'leads' => $campaigns->sum('leads_count'),
+            'leads_per_period' => $campaigns->sum('leads_per_period'),
+            'leads_unique' => $campaigns->sum('leads_unique_count'),
+            'leads_from_yesterday' => $campaigns->sum('leads_from_yesterday'),
+            'leads_from_today' => $campaigns->sum('leads_from_today'),
+            'revenue' => $campaigns->sum('revenue')
+        ] : [];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Return the data
+        |--------------------------------------------------------------------------
+        */
+
+        return [
+            'campaigns' => $campaigns,
+            'summary' => $summary,
+            'chart' => [
+                'labels' => $leads->pluck('created_at'),
+                'datasets' => $datasets
+            ]
+        ];
+    }
+}
+

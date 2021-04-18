@@ -1,0 +1,117 @@
+<?php
+
+namespace App\Http\Services\Xmls;
+
+use DB;
+use App\Http\Services\Contracts\Xml as XmlInterface;
+
+class Smartly extends Xml implements XmlInterface
+{
+    /**
+     * Defines the root tag element of the XML.
+     */
+    protected $rootTag = 'Smartly';
+
+    /**
+     * Defines the tag of each child element of the XML.
+     */
+    protected $itemTag = 'Listing';
+
+    /**
+     *
+     */
+    public function query()
+    {
+        return DB::table('db_res_utf8.res_listings AS l')
+                 ->select(
+                    'l.listing_id',
+                    'l.listing_status',
+                    'l.searchsource_onoff',
+                    'u.user_name',
+                    'u.user_id',
+                    'l.listing_broker_propid',
+                    'n.listing_title',
+                    's.construction_stage_nome',
+                    'l.listing_ptype_name',
+                    'n.listing_pricefrom',
+                    'n.listing_priceto',
+                    'n.listing_hide_price',
+                    'n.listing_areafrom',
+                    'n.listing_areato',
+                    'n.listing_bedroomfrom',
+                    'n.listing_bedroomto',
+                    'l.listing_state',
+                    'l.listing_city',
+                    'l.listing_district',
+                    'l.listing_stname',
+                    'l.listing_zip',
+                    'c.locality_nosub',
+                    'd.DISTRITO',
+                    'd.ZONA',
+                    'l.listing_latitude',
+                    'l.listing_longitude'
+                 )
+                 ->leftJoin('ai_prod.res_listings_newconst AS n', 'l.listing_id', '=', 'n.listing_id')
+                 ->leftJoin('db_res_utf8.res_users AS u', 'l.listing_user_id', '=', 'u.user_id')
+                 ->leftJoin('ai_core.core_construction_stages AS s', 'n.construction_stage_id', '=', 's.construction_stage_id')
+                 ->leftJoin('db_res_utf8.res_dne_district AS d', 'l.neigh_id', '=', 'd.BAI_NU_SEQUENCIAL')
+                 ->leftJoin('db_res_utf8.res_dne_locality AS c', 'l.city_id', '=', 'c.locality_id')
+                 ->where('l.listing_type_id', 7)
+                 ->where('l.listing_status', '1')
+                 ->where('l.searchsource_onoff', '1');
+    }
+
+    /**
+     *
+     */
+    public function map($item, $key)
+    {
+        $zone_code = $item->ZONA ? str_replace('ona ', '', $item->ZONA) : null;
+        $district = ($item->DISTRITO && $item->DISTRITO != 'Desconhecido') ? $item->DISTRITO : null;
+
+        return [
+            'ListingID' => $item->listing_id,
+            'ListingStatus' => $item->listing_status,
+            'SearchONOFF' => $item->searchsource_onoff,
+            'ConstrutoraCode' => $this->code($item->user_name),
+            'UserID' => $item->user_id,
+            'CodigoImovel' => $item->listing_broker_propid,
+            'NomeCondo' => $item->listing_title,
+            'Stage' => $item->construction_stage_nome,
+            'Tipo' => $item->listing_ptype_name,
+            'PriceFrom' => $item->listing_pricefrom,
+            'PriceTo' => $item->listing_priceto,
+            'ShowPrice' => $item->listing_hide_price,
+            'AreaFrom' => $item->listing_areafrom,
+            'AreaTo' => $item->listing_areato,
+            'BedFrom' => $item->listing_bedroomfrom,
+            'BedTo' => $item->listing_bedroomto,
+            'UF' => $item->listing_state,
+            'Localidade' => $item->listing_city,
+            'Bairro' => $item->listing_district,
+            'Rua' => $item->listing_stname,
+            'CEP' => $item->listing_zip,
+            'CityCode' => $this->code($item->locality_nosub),
+            'Distrito' => $district,
+            'Zona' => $item->ZONA,
+            'ZoneCode' => $zone_code,
+            'ZoneCodePI' => $zone_code ? $zone_code . '_PI' : null,
+            'ZoneCodeMP' => $zone_code ? $zone_code . '_MP' : null,
+            'DistritoCode' => $district ? $this->code($district) : null,
+            'Lat' => $item->listing_latitude,
+            'Lon' => $item->listing_longitude
+        ];
+    }
+
+    /**
+     * Remove special chars and convert the given $string to StudlyCase
+     *
+     * @param string $string
+     * @return string
+     */
+    private function code($string)
+    {
+        return studly_case(str_slug($string));
+    }
+}
+

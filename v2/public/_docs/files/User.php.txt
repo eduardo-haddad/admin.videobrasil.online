@@ -1,0 +1,113 @@
+<?php
+
+namespace App;
+
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Spatie\Activitylog\Traits\CausesActivity;
+
+class User extends Authenticatable
+{
+    use Notifiable, CausesActivity;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'name', 'email', 'password', 'position', 'status'
+    ];
+
+    /**
+     * The attributes that should be hidden for arrays.
+     *
+     * @var array
+     */
+    protected $hidden = [
+        'password', 'remember_token',
+    ];
+
+    /**
+    * The attributes that should be cast to native types.
+    *
+    * @var array
+    */
+    protected $casts = [
+        'status' => 'boolean',
+    ];
+
+    /**
+     * The roles that belong to the user.
+     */
+    public function roles()
+    {
+        return $this->belongsToMany('App\Role')->withTimestamps();
+    }
+
+    /**
+     * The notifications that belong to the user.
+     */
+    public function notifications()
+    {
+        return $this->belongsToMany('App\Notification')->withTimestamps();
+    }
+
+    /**
+     * The Lead QAs that belong to the user.
+     */
+    public function qas()
+    {
+        return $this->hasMany('App\Lead\Qa');
+    }
+
+    /**
+     * Checks if the user has the given role.
+     *
+     * @param string $alias
+     * @return bool
+     */
+    public function hasRole($alias)
+    {
+        return $this->roles()->where('alias', $alias)->first() ? true : false;
+    }
+
+    /**
+     * Checks if the user is Super Admin.
+     */
+    public function isSuperAdmin()
+    {
+        return $this->roles()->where('alias', 'root')->first() ? true : false;
+    }
+
+    /**
+     * Get user's first name.
+     */
+    public function getFirstNameAttribute()
+    {
+        return explode(' ', $this->name)[0];
+    }
+
+    /**
+     * Get the User's friendly status based on status.
+     */
+    public function getStatusContextAttribute()
+    {
+      return $this->status ? '' : 'active';
+    }
+
+    /**
+     * Scope a query to return users subscribed on given $notifications
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param array $notifications
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeSubscribedTo($query, array $notifications)
+    {
+        return $query->whereHas('notifications', function($query) use($notifications) {
+            $query->whereIn('alias', $notifications);
+        });
+    }
+}
+

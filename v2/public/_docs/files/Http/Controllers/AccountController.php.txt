@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Hash;
+use App\User;
+use App\Http\Requests\StoreUser;
+use App\Http\Controllers\Controller;
+
+class AccountController extends Controller
+{
+    /**
+     * Show the form for editing the user account.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function edit()
+    {
+        return view('account.edit');
+    }
+
+    /**
+     * Update the user account.
+     *
+     * @param \App\Http\Requests\StoreUser $request
+     * @return \Illuminate\Http\Response
+     */
+    public function update(StoreUser $request)
+    {
+        $user = $request->user();
+
+        if($user->can('manage', User::class)){
+            $user->fill($request->only('name', 'email'));
+            $user->roles()->sync($request->get('roles'));
+        }
+
+        $user->notifications()->sync($request->get('notifications'));
+
+        if($request->filled('new_password')){
+            $user->password = Hash::make($request->get('new_password'));
+        }
+
+        $user->position = $request->get('position');
+        $user->save();
+
+        return redirect()->route('account.edit')
+                         ->with('success', 'Dados atualizados com sucesso!');
+    }
+}
+

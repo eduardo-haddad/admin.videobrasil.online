@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Http\Services\Xmls;
+
+use DB;
+use App\Http\Services\Contracts\Xml as XmlInterface;
+
+class AvmBuilding extends Xml implements XmlInterface
+{
+    /**
+     * Defines the root tag element of the XML.
+     */
+    protected $rootTag = 'Avm';
+
+    /**
+     * Defines the tag of each child element of the XML.
+     */
+    protected $itemTag = 'Building';
+
+    /**
+     *
+     */
+    public function query()
+    {
+        return DB::table('avmdb.building AS b')
+                 ->select(
+                    'b.building_id',
+                    'b.building_name',
+                    'u.abbreviation',
+                    'c.name AS city',
+                    'd.ZONA',
+                    'd.DISTRITO',
+                    'n.name AS neighborhood',
+                    'n.dne_name',
+                    's.name AS street',
+                    'b.street_number',
+                    'z.code',
+                    'b.delivery_year',
+                    'b.floor_count',
+                    'b.area_lot'
+                )
+                ->leftJoin('avmdb.cep AS z', 'b.cep_id', '=', 'z.cep_id')
+                ->leftJoin('avmdb.street AS s', 'b.street_id', '=', 's.street_id')
+                ->leftJoin('avmdb.neighborhood AS n', 's.neighborhood_id', '=', 'n.neighborhood_id')
+                ->leftJoin('avmdb.city AS c', 'n.city_id', '=', 'c.city_id')
+                ->leftJoin('avmdb.state AS u', 'c.state_id', '=', 'u.state_id')
+                ->leftJoin('db_res_utf8.res_dne_district AS d', 'n.neighborhood_id', '=', 'd.BAI_NU_SEQUENCIAL')
+                ->where('c.city_id', 9668)
+                ->where('b.building_type_code', 'A')
+                ->groupBy(DB::raw('street, b.street_number'));
+    }
+
+    /**
+     *
+     */
+    public function map($item, $key)
+    {
+        return [
+            'BuildingID' => $item->building_id,
+            'NomeCondo' => $item->building_name,
+            'UF' => $item->abbreviation,
+            'Localidade' => $item->city,
+            'Zona' => $item->ZONA,
+            'Distrito' => $item->DISTRITO,
+            'Bairro' => $item->neighborhood,
+            'Rua' => $item->street,
+            'NumRua' => $item->street_number,
+            'CEP' => $item->code,
+            'AnoEntrega' => $item->delivery_year,
+            'Pavimentos' => $item->floor_count,
+            'AreaTerreno' => $item->area_lot,
+            'URL' => env('PORTAL_URL') . '/quanto-vale-seu-imovel/sp/' . str_slug($item->city) . '/' . str_slug($item->dne_name) . '/' . str_slug($item->street) . '/b' . $item->building_id
+        ];
+    }
+}
+

@@ -1,0 +1,123 @@
+<?php
+
+namespace App\Http\Services\Reports\Leads;
+
+use Carbon\Carbon;
+use App\Activity\Lead as Activity;
+use App\Http\Services\Reports\Report;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+
+class NoContactReport extends Report implements FromCollection, WithMapping, WithHeadings
+{
+    protected $from_date;
+    protected $to_date;
+    protected $by_client;
+    protected $by_group;
+
+    /**
+     * Creates a new instance of the class
+     *
+     * @param array $mod
+     */
+    public function __construct($mod = null)
+    {
+        if(isset($mod['from_date'])){
+            $this->from_date = $mod['from_date'];
+        }
+
+        if(isset($mod['end_date'])){
+            $this->end_date = $mod['end_date'];
+        }
+
+        if(isset($mod['by_client'])){
+            $this->by_client = $mod['by_client'];
+        }
+
+        if(isset($mod['by_group'])){
+            $this->by_group = $mod['by_group'];
+        }
+    }
+
+    /**
+     * Returns the collection to create the report
+     */
+    public function collection()
+    {
+        // Get everytime an App\Lead\Qa model was updated
+        $query = Activity::withRelationships()
+                         ->where('subject_type', 'App\Lead\Qa')
+                         ->where('description', 'updated');
+
+        if($this->from_date){
+            $from_date = Carbon::createFromFormat('d/m/Y', $this->from_date);
+            $query->where('activity_log.created_at', '>=', $from_date->startOfDay());
+        }
+
+        if($this->to_date){
+            $to_date = Carbon::createFromFormat('d/m/Y', $this->to_date);
+            $query->where('activity_log.created_at', '<=', $to_date->endOfDay());
+        }
+
+        if($this->by_client){
+            $query->whereClientIn($this->by_client);
+        } elseif($this->by_group){
+            $query->whereGroupIn($this->by_group);
+        }
+
+        // Get everytime an App\Lead\Qa model had the talked_to_broker attribute updated to "n"
+        $act1 = (clone $query)->where('properties->attributes->talked_to_broker', 'n')->get()->keyBy('subject_id');
+        // Get everytime an App\Lead\Qa model had the searching_immobile attribute updated to "s"
+        $act2 = (clone $query)->where('properties->attributes->searching_immobile', 's')->get()->keyBy('subject_id');
+
+        // We use subject_id as key to able to get only QAs present on both collections
+        // keyBy also removes duplicates, only the last one will appear in the new collection
+        // (https://laravel.com/docs/5.5/collections#method-keyby)
+        return $act1->intersectByKeys($act2);
+    }
+
+    /**
+     * Map the values used in each cell.
+     *
+     * @var App\Activity $activity
+     */
+    public function map($activity): array
+    {
+        $qa = $activity->subject;
+        $lead = $qa->lead;
+
+        return [
+            $activity->created_at->format('d/m/Y H:i'),
+            $lead->datetime->format('d/m/Y'),
+            $lead->datetime->format('H:i'),
+            $qa->first_talk_at ? $qa->first_talk_at->format('d/m/Y') : '',
+            $qa->first_talk_at ? $qa->first_talk_at->format('H:i') : '',
+            $lead->fromname,
+            $lead->fromemail,
+            $lead->fromphone1->format('N'),
+            $lead->listing && $lead->listing->client ? $lead->listing->client->user_name : '',
+            $lead->listing && $lead->listing->newconst ? $lead->listing->newconst->listing_title_pt : ''
+        ];
+    }
+
+    /**
+     * Add header.
+     */
+    public function headings(): array
+    {
+        return [
+            'Data da Alteração',
+            'Data do Lead',
+            'Horário do Lead',
+            'Data da conversa',
+            'Horário da conversa',
+            'Nome do Lead',
+            'Email do Lead',
+            'Telefone do Lead',
+            'Nome do Cliente',
+            'Nome do Empreendimento'
+        ];
+    }
+}
+

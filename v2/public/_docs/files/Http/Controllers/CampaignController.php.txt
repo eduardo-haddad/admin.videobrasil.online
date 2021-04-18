@@ -1,0 +1,239 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use DB;
+use App\Campaign;
+use App\Client\Client;
+use App\Client\Group;
+use App\Listing\Listing;
+use App\Events\PivotAttached;
+use App\Events\PivotDetached;
+use Illuminate\Http\Request;
+use App\Http\Requests\StoreCampaign;
+
+class CampaignController extends Controller
+{
+    /**
+     * @var \App\Http\Services\Contracts\Result
+     */
+    private $result;
+
+    /**
+     *
+     */
+    public function __construct(\App\Http\Services\Contracts\Result $result)
+    {
+        $this->result = $result;
+    }
+
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        $campaigns = Campaign::withCount([
+          'listings',
+          'leads' => function($query){ $query->disqualified(false); },
+          'leads as leads_unique_count' => function($query){ $query->unique()->disqualified(false); }
+        ])->orderBy('created_at', 'DESC');
+
+        $scheduled_campaigns = Campaign::scheduled()->count();
+        $active_campaigns = Campaign::active()->count();
+        $paused_campaigns = Campaign::paused()->count();
+        $expired_campaigns = Campaign::expired()->count();
+
+        return view('campaigns.index', [
+            'campaigns' => $campaigns->paginate(15),
+            'scheduled_campaigns' => $scheduled_campaigns,
+            'active_campaigns' => $active_campaigns,
+            'paused_campaigns' => $paused_campaigns,
+            'expired_campaigns' => $expired_campaigns,
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        return view('campaigns.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param \App\Http\Requests\StoreCampaign $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(StoreCampaign $request)
+    {
+        DB::transaction(function () use($request) {
+            // Create the Campaign
+            $campaign = Campaign::create($request->except(['by_group', 'by_client', 'listings', 'DataTables_Table_0_length', 'DataTables_Table_1_length']));
+
+            if($ids = $request->get('listings')){
+                // Get only listings that are not in any campaigns (except the expired ones).
+                // Doens't matter the campaign status, if its running (1) or paused (0).
+                $listings = Listing::whereDoesntHave('campaigns', function($query){
+                                       $query->notExpired();
+                                   })
+                                   ->whereIn('listing_id', $ids)
+                                   ->get();
+
+                // Associate the listings
+                $campaign->listings()->attach($listings);
+                $campaign->save();
+            }
+        });
+
+        return redirect()->route('campaigns.index')
+                         ->with('success', 'Campanha criada com sucesso!');
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        $campaign = Campaign::with([
+            'listings:res_listings.listing_id,listing_user_id,listing_state,listing_city,listing_broker_name,searchsource_onoff,listing_status',
+            'listings.newconst:listing_id,listing_title',
+            'listings.client:user_id,user_name,group_id',
+            'listings.client.group:id,name'
+        ])->find($id);
+
+        return view('campaigns.edit', [
+            'campaign' => $campaign
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param \App\Http\Requests\StoreCampaign $request
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(StoreCampaign $request, $id)
+    {
+        $campaign = Campaign::find($id);
+
+        if($campaign->overall_status == 'expired'){
+            // If the campaign is expired and it's being updated,
+            // we need to check if the listings already attached to this campaign
+            // are not in some other campaign.
+            $listings_in_use = $campaign->listings()
+                                        ->whereHas('campaigns', function($query) use($id){
+                                            $query->notExpired()
+                                                  ->where('res_campaign.id', '<>', $id);
+                                        })->get();
+
+            if($listings_in_use->isNotEmpty()){
+                return redirect()->back()
+                                 ->withErrors('Os listings ' . implode(', ', $listings_in_use->pluck('listing_id')->all()) . ' já fazem parte de outra campanha. Você não pode atualizar essa campanha até que esses listings sejam removidos da outra campanha.');
+            }
+        }
+
+        DB::transaction(function () use($request, $campaign) {
+            $campaign->fill($request->except(['by_group', 'by_client', 'listings', 'DataTables_Table_0_length', 'DataTables_Table_1_length']));
+
+            if($ids = $request->get('listings')){
+                // Get only listings that are not in any campaigns (except the expired ones).
+                // Doens't matter the campaign status, if its running (1) or paused (0).
+                $listings = Listing::whereDoesntHave('campaigns', function($query){
+                                       $query->notExpired();
+                                   })
+                                   ->whereIn('listing_id', $ids)
+                                   ->get();
+
+                // Associate the listings
+                $campaign->listings()->attach($listings);
+            }
+
+            if($request->get('update_leads')){
+                // Update all Campaign's leads.
+                // Note: We're updating each model at a time to use Mutators.
+                //       When issuing a mass update, models are never retrieved.
+                $campaign->leads->each(function($lead) use($request){
+                    $lead->update(['lead_value' => $request->get('lead_price')]);
+                });
+            }
+
+            $campaign->save();
+        });
+
+        if($request->wantsJson()){
+            return response()->json($campaign->status_context);
+        }
+
+        return redirect()->route('campaigns.index')
+                         ->with('success', 'Campanha atualizada com sucesso!');
+    }
+
+    /**
+     * Display the Campaigns results.
+     */
+    public function results()
+    {
+        return view('campaigns.results', $this->result->get());
+    }
+
+    /**
+     * Clone the Campaign.
+     *
+     * @param int $id
+     */
+    public function clone(Request $request, $id)
+    {
+        $campaign = Campaign::findOrFail($id);
+
+        if(!($campaign->overall_status == 'expired' || $campaign->listings->isEmpty())){
+            // To be "clonable", the Campaign must be expired or have no listings attached.
+            return redirect()->back()
+                             ->withErrors('A campanha que você está tentando clonar não expirou ou contém listings em uso.');
+        }
+
+        $clone = $campaign->replicate();
+
+        DB::transaction(function () use($clone, $campaign) {
+            $clone->name .= ' Clone';
+            $clone->save();
+            $clone->listings()->attach($campaign->listings->pluck('listing_id')->all());
+        });
+
+        return redirect()->route('campaigns.edit', ['id' => $clone->id])
+                         ->with('success', 'Campanha clonada com sucesso!');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param int $id
+     */
+    public function destroy($id)
+    {
+        Campaign::destroy($id);
+    }
+
+    /**
+     * Remove the listing relationship.
+     *
+     * @param int $id
+     * @param int $listing
+     */
+    public function destroyListing($id, $listing)
+    {
+        Campaign::find($id)
+                ->listings()
+                ->detach($listing);
+    }
+}
+

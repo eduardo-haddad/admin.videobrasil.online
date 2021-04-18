@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Notifications;
+
+use Auth;
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\SlackMessage;
+
+class Exception extends Notification
+{
+    use Queueable;
+
+    /**
+     * @var \Exception
+     */
+    private $e;
+
+    /**
+     * Create a new notification instance.
+     *
+     * @return void
+     */
+    public function __construct($e)
+    {
+        $this->e = $e;
+    }
+
+    /**
+     * Get the notification's delivery channels.
+     *
+     * @param  mixed  $notifiable
+     * @return array
+     */
+    public function via($notifiable)
+    {
+        return ['slack'];
+    }
+
+    /**
+     * Get the Slack representation of the notification.
+     *
+     * @param  mixed  $notifiable
+     * @return \Illuminate\Notifications\Messages\MailMessage
+     */
+    public function toSlack($notifiable)
+    {
+        $title = get_class($this->e);
+        $trace = $this->e->getTraceAsString();
+        $fields = [
+            'Environment' => app()->environment(),
+            'File' => $this->e->getFile() . ':' . $this->e->getLine(),
+            'Code' => $this->e->getCode(),
+            'Messsage' => $this->e->getMessage(),
+        ];
+
+        if(Auth::check()){
+            $user = Auth::user();
+            $fields['User'] = $user->name . ' (' . $user->id . ')';
+        }
+
+        return (new SlackMessage)
+                    ->error()
+                    ->from('Agente Imóvel')
+                    ->image('https://admin-grinder.agenteimovel.com.br/v2/images/ai-s.png')
+                    ->content('A new error occurred.')
+                    ->attachment(function($attachment) use($title, $fields){
+                        $attachment->title($title)
+                                   ->fields($fields);
+                    })
+                    ->attachment(function($attachment) use($trace){
+                        $attachment->title('Stack Trace')
+                                   ->content($trace);
+                    });
+    }
+}
+

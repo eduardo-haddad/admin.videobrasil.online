@@ -1,0 +1,78 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Carbon\Carbon;
+use App\Client\Client;
+use App\Listing\Listing;
+use Illuminate\Console\Command;
+
+class CampaignListings extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'campaign:listings {action : Possible values are: "publish" or "unpublish"}';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Publish/Unpublish the Campaign Listings of the day';
+
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Execute the console command.
+     *
+     * @return mixed
+     */
+    public function handle()
+    {
+        // Note: We're updating each model at a time to Trigger ORM Events.
+        //       When issuing a mass update, models are never retrieved.
+
+        switch ($this->argument('action')) {
+            case 'publish':
+                // Publish listings belonging to Campaigns that starts today
+                Listing::whereHas('campaigns', function($query){
+                    $query->where('start_date', date('Y-m-d'))
+                          ->where('status', true);
+                })->get()->each(function($listing){
+                    $listing->update(['searchsource_onoff' => '1']);
+                });
+
+                $this->info('Listings were published succesfully.');
+                break;
+
+            case 'unpublish':
+                // Unpublish listings belonging to Campaigns that expired yesterday
+                // (If unpublish_listings is true)
+                Listing::whereHas('campaigns', function($query){
+                    $query->where('end_date', Carbon::yesterday()->format('Y-m-d'))
+                          ->where('unpublish_listings', true);
+                })->get()->each(function($listing){
+                    $listing->update(['searchsource_onoff' => '0']);
+                });
+
+                $this->info('Listings were unpublished succesfully.');
+                break;
+
+            default:
+                $this->error('Invalid argument passed to {action}.');
+                break;
+        }
+    }
+}
+

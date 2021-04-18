@@ -1,0 +1,206 @@
+<?php
+
+namespace App\Lead;
+
+use DB;
+use Auth;
+use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Traits\LogsActivity;
+
+class Qa extends Model
+{
+    use LogsActivity;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'lead_qas';
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = [];
+
+    /**
+     * The attributes that should be mutated to dates.
+     *
+     * @var array
+     */
+    protected $dates = [
+        'first_talk_at',
+        'hotlead'
+    ];
+
+    /**
+     * The attributes that need to be logged.
+     */
+    protected static $logAttributes = ['*'];
+
+    /**
+     * Set to true to logged only attributes
+     * that were actually changed after the update.
+     */
+    protected static $logOnlyDirty = true;
+
+    /**
+     * Get the agent that owns the QA.
+     */
+    public function agent()
+    {
+        return $this->belongsTo('App\User', 'user_id');
+    }
+
+    /**
+     * Get the lead that owns the QA.
+     */
+    public function lead()
+    {
+        return $this->belongsTo('App\Lead\Lead', 'lead_id');
+    }
+
+    /**
+     * Get the attempts for the QA.
+     */
+    public function attempts()
+    {
+        return $this->hasMany('App\Lead\Qa\Attempt', 'lead_qa_id');
+    }
+
+    /**
+     * Get the callbacks for the QA.
+     */
+    public function callbacks()
+    {
+        return $this->hasMany('App\Lead\Qa\Callback', 'lead_qa_id');
+    }
+
+    /**
+     * Set the Lead QA's first_talk_at
+     *
+     * @param  string  $value
+     * @return void
+     */
+    public function setFirstTalkAtAttribute($value)
+    {
+        $this->attributes['first_talk_at'] = $value ? date_create_from_format('d/m/Y H:i', $value) : null;
+    }
+
+    /**
+     * Set the Lead QA's hotlead.
+     *
+     * @param  string  $value
+     * @return void
+     */
+    public function setHotleadAttribute($value)
+    {
+        $this->attributes['hotlead'] = $value ? date_create_from_format('d/m/Y H:i', $value) : null;
+    }
+
+    /**
+     * Get the Lead QA's context status.
+     */
+    public function getStatusContextAttribute()
+    {
+        return Auth::check() && Auth::user()->id == $this->user_id ? 'info' : '';
+    }
+
+    /**
+     *
+     */
+    public function getFriendlyStatusAttribute()
+    {
+        if($this->attributes['hotlead']){
+            return 'hotlead';
+        }
+
+        if($this->attributes['searching_immobile'] == 'n'){
+            return 'no-interest';
+        }
+
+        if($this->attributes['searching_immobile'] == 's' && $this->attributes['talked_to_broker'] == 'n'){
+            return 'no-contact';
+        }
+    }
+
+    /**
+     * Return the attempts sequencially, in a single string.
+     */
+    public function getSequencialAttemptsAttribute()
+    {
+        return implode('', $this->attempts->pluck('channel')->toArray());
+    }
+
+    /**
+     * Return the available phone options.
+     */
+    public static function getPhoneOptions()
+    {
+        return ['' => '', 't' => 'T', 'w' => 'W', 'd' => 'D', 'cp' => 'CP', 'n' => 'Não'];
+    }
+
+    /**
+     * Return the available attempt options.
+     *
+     * @param {string} $attempts
+     */
+    public static function getAttemptOptions($attempts = '')
+    {
+        $options = collect([
+            '',
+            'w', 'wt', 'wtw', 'wtwt',
+            't', 'tw', 'twt', 'twtw',
+            'w', 'ww', 'www', 'wwww',
+            't', 'tt', 'ttt', 'tttt'
+        ]);
+
+        $options = $options->mapWithKeys(function($option){
+            return [$option => strtoupper($option)];
+        })->all();
+
+        return array_filter($options, function($option) use($attempts){
+            if(empty($attempts)){
+                return strlen($option) == 1 || empty($option);
+            }
+
+            return preg_match('/^' . $attempts . '(w|t){0,1}$/', $option) == 1;
+        }, ARRAY_FILTER_USE_KEY);
+    }
+
+    /**
+     * Return the available callback options.
+     */
+    public static function getCallbackOptions()
+    {
+        return ['' => '', 'w' => 'W', 't' => 'T'];
+    }
+
+    /**
+     * Return the available common options.
+     *
+     * @param boolean $include_intend_to
+     */
+    public static function getCommonOptions($include_intend_to = true)
+    {
+        $options = ['' => 'Selecione', 's' => 'Sim', 'n' => 'Não', 'p' => 'Pretende', 'sr' => 'Sem resposta'];
+
+        if(!$include_intend_to){
+            unset($options['p']);
+        }
+
+        return $options;
+    }
+
+    /**
+     * Return the option value for the given $key
+     *
+     * @param string $key
+     */
+    public static function getOption($key){
+      return self::getCommonOptions()[$key];
+    }
+}
+

@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Http\Controllers\Lead;
+
+use DB;
+use App\Lead\Qa;
+use App\Lead\Lead;
+use App\Lead\QaAttempt;
+use App\Http\Requests\StoreLeadQa;
+use App\Http\Controllers\Controller;
+
+class QaController extends Controller
+{
+    /**
+     * Update the specified resource in storage.
+     *
+     * @param App\Http\Requests\StoreLeadQa $request
+     * @param int $id
+     */
+    public function update(StoreLeadQa $request, $id)
+    {
+        $lead = Lead::findOrFail($id);
+
+        DB::beginTransaction();
+
+        try{
+            if(!($qa = $lead->qa)){
+                $qa = $lead->qa()->create();
+            }
+
+            // Get the last registered activity for this resource
+            // before we update it and register a new one. This will be used later.
+            $last_activity = $qa->activity->last();
+
+            $qa->fill($request->except(['attempts', 'callback']));
+            $qa->save();
+
+            if($request->has('attempts')){
+                $attempts = $request->get('attempts');
+
+                if($request->filled('attempts')){
+                    if(strlen($attempts) < strlen($qa->sequencial_attempts)){
+                        // Delete the last saved attempt
+                        $qa->attempts->last()->delete();
+                    } else {
+                        // Create one more attempt
+                        $channels = str_split($attempts);
+                        $last_attempt = $qa->attempts()->create(['channel' => array_pop($channels)]);
+                    }
+                } else {
+                    $qa->attempts()->delete();
+                }
+            }
+
+            if($request->filled('callback.channel')){
+                $last_callback = $qa->callbacks()->create($request->get('callback'));
+            }
+
+            DB::commit();
+        } catch(\Exception $e){
+            DB::rollBack();
+        }
+
+        if($request->wantsJson()){
+            if($request->has('attempts')){
+                return response()->json([
+                  'attemptOptions' => Qa::getAttemptOptions($attempts),
+                  'lastAttempt' => isset($last_attempt) ? $last_attempt : null
+                ]);
+            }
+
+            $data = [
+                'lead_qa_friendly_status' => $qa->friendly_status
+            ];
+
+            // Get the last registered activity after the update
+            $activity = $qa->activity()->where('properties->attributes->updated_at', $qa->updated_at)
+                                       ->where('id', '<>', $last_activity->id)
+                                       ->first();
+
+            if($activity){
+                $data['history'] = view('leads.qa.history', ['activity' => $activity])->render();
+            }
+
+            if($request->filled('callback.channel')){
+                $data['callback'] = view('leads.qa.callback', ['callback' => $last_callback])->render();
+            }
+
+            return response()->json($data);
+        }
+    }
+}
+
