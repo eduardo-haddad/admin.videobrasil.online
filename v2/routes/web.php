@@ -43,6 +43,9 @@ Route::middleware(['auth'])->group(function(){
     /* Season */
     Route::resource('season', 'SeasonTypeController'); 
     
+    /* Partner roles */
+    Route::resource('partnerroles', 'PartnerRoleController'); 
+    
     /* Edition */
     Route::resource('edition', 'EditionController'); 
 

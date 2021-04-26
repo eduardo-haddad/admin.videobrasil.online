@@ -32,6 +32,7 @@
               <li><a href="{{ route('sobre.edit') }}">Sobre</a></li>
               <li><a href="{{ route('equipe.index') }}">Equipe</a></li>
               <li><a href="{{ route('season.index') }}">Tipos de temporada</a></li>
+              <li><a href="{{ route('partnerroles.index') }}">Tipos de chancela</a></li>
             </ul>
           </li>
           
