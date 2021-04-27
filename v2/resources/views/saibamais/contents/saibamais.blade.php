@@ -15,6 +15,7 @@
   </div>
 
   @if(!empty($saibamais))
+    <!-- Links -->
     <div class="row">
       <div class="col-md-12 col-sm-12 col-xs-12">
         <div class="x_panel">
@@ -53,6 +54,56 @@
                         <a href="{{ route('linksaibamais.edit', ['edition_id' => $edition->id, 'id' => $link->id]) }}" title="Editar" class="btn btn-default btn-sm"><i class="fa fa-pencil"></i></a>
                         <!-- Delete -->
                         <form action="{{ route('linksaibamais.destroy', ['id' => $link->id]) }}" method="POST">
+                            <input name="_method" type="hidden" value="DELETE">
+                            {{ csrf_field() }}
+                            {{ Form::hidden('saibamais_id', $saibamais->id) }}
+                            {{ Form::hidden('edition_id', $edition->id) }}
+                            <button type="submit" onclick="return confirm('Tem certeza que deseja remover este item?')" class="btn btn-default btn-sm"><i class="fa fa-trash"></i></button>
+                        </form>
+                      </div>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Logos -->
+    <div class="row">
+      <div class="col-md-12 col-sm-12 col-xs-12">
+        <div class="x_panel">
+          <div class="x_title">
+            <h2>Logos</h2>
+            <div class="clearfix"></div>
+          </div>
+
+          <div class="btn-group">
+            <a href="{{ route('logosaibamais.create', ['edition_id' => $edition->id, 'saibamais->id' => $saibamais->id]) }}" class="btn btn-primary"><i class="fa fa-plus"></i> Logo</a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover mt-15">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Imagem</th>
+                  <th>Url</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach($logos as $logo)
+                  <tr class="">
+                    <td>{{ $logo->id }}</td>
+                    <td><div class="ml-5">{{ !empty($logo->img) ? $logo->img : "" }}</div></td>
+                    <td>{{ !empty($logo->url) ? $logo->url : "" }}</td>
+                    <td class="text-left">
+                      <div class="btn-group">
+                        <!-- Edit -->
+                        <a href="{{ route('logosaibamais.edit', ['edition_id' => $edition->id, 'id' => $logo->id]) }}" title="Editar" class="btn btn-default btn-sm"><i class="fa fa-pencil"></i></a>
+                        <!-- Delete -->
+                        <form action="{{ route('logosaibamais.destroy', ['id' => $logo->id]) }}" method="POST">
                             <input name="_method" type="hidden" value="DELETE">
                             {{ csrf_field() }}
                             {{ Form::hidden('saibamais_id', $saibamais->id) }}

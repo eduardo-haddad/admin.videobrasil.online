@@ -4,9 +4,9 @@ namespace App;
 
 use Illuminate\Database\Eloquent\Model;
 
-class SaibaMais extends Model
+class LogoSaibaMais extends Model
 {
-    protected $table = 'videobrasil.vbo_saibamais';
+    protected $table = 'videobrasil.vbo_logos_saibamais';
     const CREATED_AT = 'createdAt';
     const UPDATED_AT = 'updatedAt';
 
@@ -15,8 +15,9 @@ class SaibaMais extends Model
      *
      * @var array
      */
+    
     protected $fillable = [
-        'content_pt', 'content_en', 'replace_text'
+        'img', 'url', 'partner_roles_id'
     ];
 
     /**
@@ -26,20 +27,14 @@ class SaibaMais extends Model
      */
     protected $guarded = ['id'];
 
-
-    public function edition()
+    public function saibamais()
     {
-        return $this->belongsTo('App\Edition');
-    }
-
-    public function links()
-    {
-        return $this->hasMany('App\LinkSaibaMais', 'saibamais_id');
+        return $this->belongsTo('App\SaibaMais');
     }
     
-    public function logos()
+    public function partner_roles()
     {
-        return $this->hasMany('App\LogoSaibaMais', 'saibamais_id');
+        return $this->belongsTo('App\PartnerRole');
     }
 
 }

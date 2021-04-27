@@ -16,13 +16,15 @@ class SaibaMaisController extends Controller
     public function index($id)
     {
         $edition = Edition::find($id);
-        $saibamais = SaibaMais::with('links')->where('edition_id', $id)->first();
+        $saibamais = SaibaMais::with('links', 'logos')->where('edition_id', $id)->first();
         $links = !empty($saibamais) ? $saibamais->links()->get() : null;
+        $logos = !empty($saibamais) ? $saibamais->logos()->get() : null;
 
         return view('saibamais.index', [
             'edition' => $edition,
             'saibamais' => $saibamais,
             'links' => $links,
+            'logos' => $logos,
         ]);
     }
 

@@ -71,6 +71,13 @@ Route::middleware(['auth'])->group(function(){
     ]]);
     Route::get('/linksaibamais/create/{edition_id}/{saibamais_id}', 'LinkSaibaMaisController@create')->name('linksaibamais.create');
     Route::get('/linksaibamais/edit/{edition_id}/{saibamais_id}', 'LinkSaibaMaisController@edit')->name('linksaibamais.edit');
+    
+    /* Logos Saiba mais */
+    Route::resource('logosaibamais', 'LogoSaibaMaisController', ['except' => [
+        'create', 'edit'
+    ]]);
+    Route::get('/logosaibamais/create/{edition_id}/{saibamais_id}', 'LogoSaibaMaisController@create')->name('logosaibamais.create');
+    Route::get('/logosaibamais/edit/{edition_id}/{saibamais_id}', 'LogoSaibaMaisController@edit')->name('logosaibamais.edit');
 
 });
 
